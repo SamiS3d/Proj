@@ -82,6 +82,9 @@ if __name__ == "__main__":
     last_move = time.time()
     last_btn = GPIO.input(SW_PIN)
 
+    script_map = ["Jamming.py", "Jammingdetect.py", "transmeter.py",
+                  "recever24.py", "recever32.py", "recever64.py", "recever128.py"]
+
     while True:
         x = read_channel(0)
         y = read_channel(1)
@@ -97,9 +100,7 @@ if __name__ == "__main__":
                 last_move = time.time()
 
         if last_btn == 1 and btn == 0:
-            script_map = ["Jamming.py", "Jammingdetect.py", "transmeter.py",
-                          "recever24.py", "recever32.py", "recever64.py", "recever128.py"]
-            subprocess.Popen(["python3", script_map[selected_item]])
+            subprocess.call(["python3", script_map[selected_item]])
 
         last_btn = btn
 
