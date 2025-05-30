@@ -8,7 +8,6 @@ import threading
 import queue
 from luma.core.interface.serial import spi
 from luma.lcd.device import st7735
-from luma.core.render import canvas
 from PIL import Image, ImageDraw, ImageFont
 
 # Initialize ST7735 display
@@ -65,7 +64,10 @@ jamming_active = False
 capture_process = None
 capture_active = False
 capture_bit = None
+jamming_detect_process = None
+jamming_detect_active = False
 capture_output = queue.Queue()
+recent_outputs = []
 
 def read_process_output(process):
     while process.poll() is None:
@@ -102,10 +104,27 @@ def draw_info_page(draw):
         draw.text((10, y), line, font=small_font, fill=color)
 
 def draw_sub_page(draw, title):
+    global recent_outputs
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     draw.text((15, 20), title, font=font, fill=WHITE)
-    draw.text((15, 80), "test", font=small_font, fill=WHITE)
-    draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+    
+    if title == "Jamming Detection" and jamming_detect_active:
+        try:
+            while not capture_output.empty():
+                line = capture_output.get_nowait()
+                recent_outputs.append(line)
+                if len(recent_outputs) > 3:
+                    recent_outputs.pop(0)
+            for i, output in enumerate(recent_outputs):
+                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
+            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+        except queue.Empty:
+            for i, output in enumerate(recent_outputs):
+                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
+            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+    else:
+        draw.text((15, 80), "Start" if title == "Jamming Detection" else "test", font=small_font, fill=WHITE)
+        draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
 
 def draw_jamming_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
@@ -115,8 +134,6 @@ def draw_jamming_page(draw):
     else:
         draw.text((15, 50), "Start", font=font, fill=BLUE if selected_index == 0 else WHITE)
         draw.text((15, 80), "Exit", font=small_font, fill=BLUE if selected_index == 1 else WHITE)
-# متغير عالمي لتخزين آخر الإخراجات
-recent_outputs = []
 
 def draw_capture_page(draw):
     global recent_outputs
@@ -124,24 +141,21 @@ def draw_capture_page(draw):
     if capture_active:
         draw.text((15, 20), f"Capturing {capture_bit}", font=font, fill=BLUE)
         try:
-            # قراءة الإخراج من الـ Queue
             while not capture_output.empty():
                 line = capture_output.get_nowait()
                 recent_outputs.append(line)
-                # الحفاظ على آخر 3 أسطر فقط لتجنب التكدس
                 if len(recent_outputs) > 3:
                     recent_outputs.pop(0)
-            # عرض الإخراج الأخير
             for i, output in enumerate(recent_outputs):
-                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)  # عرض حتى 20 حرفاً
+                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
             draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
         except queue.Empty:
-            # إذا كانت الـ Queue فارغة، اعرض الإخراجات المخزنة
             for i, output in enumerate(recent_outputs):
                 draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
             draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
     else:
         draw_menu(draw, capture_menu, selected_index)
+
 def draw_wifi_test_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     draw.text((15, 50), "Test Wifi", font=font, fill=BLUE if selected_index == 0 else WHITE)
@@ -192,9 +206,37 @@ while running:
                 current_menu = "wifi"
                 selected_index = 0
         elif current_menu == "security":
-            if selected_index == len(security_menu) - 1:
+            if selected_index == len(security_menu) - 1:  # Exit
                 current_menu = "main"
                 selected_index = 1
+            elif selected_index == 0:  # Jamming Detection
+                current_menu = "security_sub"
+                current_page = security_menu[selected_index]
+                selected_index = 0
+                if jamming_detect_active:
+                    if jamming_detect_process:
+                        try:
+                            jamming_detect_process.send_signal(signal.SIGINT)
+                            jamming_detect_process.wait(timeout=5)
+                            print("✅ Jamming Detection stopped.")
+                        except Exception as e:
+                            print(f"⚠️ Error stopping Jammingdetect.py: {e}")
+                        jamming_detect_process = None
+                        jamming_detect_active = False
+                        recent_outputs = []
+                else:
+                    try:
+                        jamming_detect_process = subprocess.Popen(
+                            ["python3", "Jammingdetect.py"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True
+                        )
+                        threading.Thread(target=read_process_output, args=(jamming_detect_process,), daemon=True).start()
+                        jamming_detect_active = True
+                        print("🚨 Jamming Detection started.")
+                    except Exception as e:
+                        print(f"⚠️ Error starting Jammingdetect.py: {e}")
             elif selected_index == 1:  # Captcher My RF kye
                 current_menu = "capture"
                 selected_index = 0
@@ -259,6 +301,7 @@ while running:
                     capture_process = None
                     capture_active = False
                     capture_bit = None
+                    recent_outputs = []
                 current_menu = "security" if current_page == "Captcher My RF kye" else "attack"
                 selected_index = 1
             elif capture_active:
@@ -273,6 +316,7 @@ while running:
                         capture_process = None
                         capture_active = False
                         capture_bit = None
+                        recent_outputs = []
             else:
                 if selected_index in [0, 1, 2, 3]:  # 24BIT, 32BIT, 64BIT, 128BIT
                     bit_options = ["24", "32", "64", "128"]
@@ -343,5 +387,15 @@ if capture_active and capture_process:
         print(f"✅ Capturing {capture_bit} stopped during cleanup.")
     except Exception as e:
         print(f"⚠️ Error during capture cleanup: {e}")
+if jamming_detect_active and jamming_detect_process:
+    try:
+        jamming_detect_process.send_signal(signal.SIGINT)
+        jamming_detect_process.wait(timeout=5)
+        print("✅ Jamming Detection stopped during cleanup.")
+    except Exception as e:
+        print(f"⚠️ Error during jamming detect cleanup: {e}")
+    jamming_detect_process = None
+    jamming_detect_active = False
+    recent_outputs = []
 GPIO.cleanup()
 device.cleanup()
