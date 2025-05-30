@@ -12,7 +12,7 @@ if not pi.connected:
 
 pi.set_mode(GPIO_TX, pigpio.OUTPUT)
 
-running = True
+running = سTrue
 
 def smooth_shutdown(signal, frame):
     global running
