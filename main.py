@@ -1,3 +1,4 @@
+from luma.core.render import canvas
 import time
 import smbus2
 import RPi.GPIO as GPIO

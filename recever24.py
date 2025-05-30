@@ -91,7 +91,7 @@ def process_timings(timings):
         if bits != last_bits or (now_time - last_bits_time) * 1000 > REPEAT_SUPPRESSION_MS:
             dec_val, hex_val = decode_bits(bits)
             now = time.strftime("%H:%M:%S", time.localtime())
-            output = f"Bits: {bits[:10]}... Dec: {dec_val}"
+            output = f"{dec_val}"
             print(output)
             sys.stdout.flush()  # هذا ضروري حتى تظهر النتيجة فورًا
             last_bits = bits
