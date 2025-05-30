@@ -257,6 +257,7 @@ while running:
                         recent_outputs = []
                 else:
                     try:
+                        stop_all_processes()
                         jamming_detect_process = subprocess.Popen(
                             ["python3", os.path.join(BASE_DIR, "Jammingdetect.py")],
                             stdout=subprocess.PIPE,
@@ -303,6 +304,7 @@ while running:
                         jamming_active = False
                 else:
                     try:
+                        stop_all_processes()  
                         jamming_process = subprocess.Popen(
                             ["python3", os.path.join(BASE_DIR, "Jamming.py")],
                             stdout=subprocess.PIPE,
@@ -357,6 +359,7 @@ while running:
                 if selected_index in [0, 1, 2, 3]:  # 24BIT, 32BIT, 64BIT, 128BIT
                     bit_options = ["24", "32", "64", "128"]
                     capture_bit = bit_options[selected_index]
+                    stop_all_processes()  
                     try:
                         capture_process = subprocess.Popen(
                             ["python3", os.path.join(BASE_DIR, f"recever{capture_bit}.py")],
