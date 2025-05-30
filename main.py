@@ -5,6 +5,7 @@ import RPi.GPIO as GPIO
 import subprocess
 import signal
 import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 import threading
 import queue
 from luma.core.interface.serial import spi
@@ -257,7 +258,7 @@ while running:
                 else:
                     try:
                         jamming_detect_process = subprocess.Popen(
-                            ["python", "Jammingdetect.py"],
+                            ["python3", os.path.join(BASE_DIR, "Jammingdetect.py")],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             text=True
@@ -302,9 +303,14 @@ while running:
                         jamming_active = False
                 else:
                     try:
-                        jamming_process = subprocess.Popen(["python", "Jamming.py"])
+                        jamming_process = subprocess.Popen(
+                            ["python3", os.path.join(BASE_DIR, "Jamming.py")],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True
+                        )
                         jamming_active = True
-                        print("🚨 Jamming started.")
+                        print("�� Jamming started.")
                     except Exception as e:
                         print(f"⚠️ Error starting Jamming.py: {e}")
             elif selected_index == 1:
@@ -353,7 +359,7 @@ while running:
                     capture_bit = bit_options[selected_index]
                     try:
                         capture_process = subprocess.Popen(
-                            ["python", f"recever{capture_bit}.py"],
+                            ["python3", os.path.join(BASE_DIR, f"recever{capture_bit}.py")],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             text=True
