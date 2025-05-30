@@ -218,7 +218,7 @@ while running:
                         jamming_active = False
                 else:
                     try:
-                        jamming_process = subprocess.Popen(["python3", "/home/pi/Jamming.py"])
+                        jamming_process = subprocess.Popen(["python3", "Jamming.py"])
                         jamming_active = True
                         print("🚨 Jamming started.")
                     except Exception as e:
@@ -267,7 +267,7 @@ while running:
                     capture_bit = bit_options[selected_index]
                     try:
                         capture_process = subprocess.Popen(
-                            ["python3", f"/home/pi/recever{capture_bit}.py"],
+                            ["python3", f"recever{capture_bit}.py"],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             text=True
