@@ -4,6 +4,8 @@ import RPi.GPIO as GPIO
 import subprocess
 import signal
 import os
+import threading
+import queue
 from luma.core.interface.serial import spi
 from luma.lcd.device import st7735
 from luma.core.render import canvas
@@ -27,11 +29,8 @@ def read_adc(channel):
         bus.write_i2c_block_data(ADS1115_ADDRESS, 0x01, [(config >> 8) & 0xFF, config & 0xFF])
         time.sleep(0.01)
         data = bus.read_i2c_block_data(ADS1115_ADDRESS, 0x00, 2)
-        value = (data[0] << 8) | data[1]
-        print(f"Channel {channel}: {value}")
-        return value
+        return (data[0] << 8) | data[1]
     except Exception as e:
-        print(f"ADC read error on channel {channel}: {e}")
         return 0
 
 # Colors (RGB)
@@ -66,6 +65,16 @@ jamming_active = False
 capture_process = None
 capture_active = False
 capture_bit = None
+capture_output = queue.Queue()
+
+def read_process_output(process):
+    while process.poll() is None:
+        try:
+            line = process.stdout.readline().decode().strip()
+            if line:
+                capture_output.put(line)
+        except:
+            break
 
 def draw_menu(draw, items, selected):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
@@ -110,8 +119,14 @@ def draw_jamming_page(draw):
 def draw_capture_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     if capture_active:
-        draw.text((15, 30), f"Capturing {capture_bit}", font=font, fill=BLUE)
-        draw.text((15, 80), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+        draw.text((15, 20), f"Capturing {capture_bit}", font=font, fill=BLUE)
+        try:
+            latest_output = capture_output.get_nowait() if not capture_output.empty() else None
+            if latest_output:
+                draw.text((15, 50), latest_output[:20], font=small_font, fill=WHITE)  # Truncate to fit
+            draw.text((15, 80), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+        except queue.Empty:
+            pass
     else:
         draw_menu(draw, capture_menu, selected_index)
 
@@ -222,9 +237,18 @@ while running:
                 selected_index = 0
         elif current_menu == "capture":
             if selected_index == len(capture_menu) - 1:  # Exit
+                if capture_active and capture_process:
+                    try:
+                        capture_process.send_signal(signal.SIGINT)
+                        capture_process.wait(timeout=5)
+                        print(f"✅ Capturing {capture_bit} stopped.")
+                    except Exception as e:
+                        print(f"⚠️ Error stopping recever{capture_bit.lower()}.py: {e}")
+                    capture_process = None
+                    capture_active = False
+                    capture_bit = None
                 current_menu = "security" if current_page == "Captcher My RF kye" else "attack"
                 selected_index = 1
-                capture_bit = None
             elif capture_active:
                 if selected_index == 0:  # Stop
                     if capture_process:
@@ -242,7 +266,13 @@ while running:
                     bit_options = ["24", "32", "64", "128"]
                     capture_bit = bit_options[selected_index]
                     try:
-                        capture_process = subprocess.Popen(["python3", f"/home/pi/recever{capture_bit}.py"])
+                        capture_process = subprocess.Popen(
+                            ["python3", f"/home/pi/recever{capture_bit}.py"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True
+                        )
+                        threading.Thread(target=read_process_output, args=(capture_process,), daemon=True).start()
                         capture_active = True
                         print(f"🚨 Capturing {capture_bit} started.")
                     except Exception as e:
