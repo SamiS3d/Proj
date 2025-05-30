@@ -1,5 +1,6 @@
 import pigpio
 import time
+import sys
 
 GPIO_PIN = 21
 pi = pigpio.pi()
@@ -18,6 +19,7 @@ MAX_STD_DEV = 1200
 MIN_BITS_LEN = 23
 MAX_BITS_LEN = 24
 REPEAT_SUPPRESSION_MS = 100
+
 def decode_bits(bits):
     try:
         decimal_value = int(bits, 2)
@@ -81,7 +83,6 @@ def timings_to_bits(timings):
         return bits
     return None
 
-
 def process_timings(timings):
     global last_bits, last_bits_time
     bits = timings_to_bits(timings)
@@ -90,22 +91,22 @@ def process_timings(timings):
         if bits != last_bits or (now_time - last_bits_time) * 1000 > REPEAT_SUPPRESSION_MS:
             dec_val, hex_val = decode_bits(bits)
             now = time.strftime("%H:%M:%S", time.localtime())
-            # إخراج موجز للشاشة
             output = f"Bits: {bits[:10]}... Dec: {dec_val}"
-            print(output)  # إخراج موجز للـ stdout
+            print(output)
+            sys.stdout.flush()  # هذا ضروري حتى تظهر النتيجة فورًا
             last_bits = bits
             last_bits_time = now_time
-            
+
+# إعداد الاستماع
 pi.callback(GPIO_PIN, pigpio.EITHER_EDGE, rf_callback)
 pi.set_watchdog(GPIO_PIN, 10)
 
 try:
     print("📡 Listening (Filtered + Dedup)... Ctrl+C to stop")
+    sys.stdout.flush()
     while True:
         time.sleep(1)
 
 except KeyboardInterrupt:
     print("\n🛑 Stopped.")
     pi.stop()
-
-

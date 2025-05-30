@@ -71,12 +71,9 @@ recent_outputs = []
 
 def read_process_output(process):
     while process.poll() is None:
-        try:
-            line = process.stdout.readline().decode().strip()
-            if line:
-                capture_output.put(line)
-        except:
-            break
+        line = process.stdout.readline()
+        if line:
+            capture_output.put(line.strip())  # بدون decode() لأنك استخدمت text=True
 
 def draw_menu(draw, items, selected):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
@@ -140,19 +137,14 @@ def draw_capture_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     if capture_active:
         draw.text((15, 20), f"Capturing {capture_bit}", font=font, fill=BLUE)
-        try:
-            while not capture_output.empty():
-                line = capture_output.get_nowait()
-                recent_outputs.append(line)
-                if len(recent_outputs) > 3:
-                    recent_outputs.pop(0)
-            for i, output in enumerate(recent_outputs):
-                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
-            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
-        except queue.Empty:
-            for i, output in enumerate(recent_outputs):
-                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
-            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+        while not capture_output.empty():
+            line = capture_output.get_nowait()
+            recent_outputs.append(line)
+            if len(recent_outputs) > 3:
+                recent_outputs.pop(0)
+        for i, output in enumerate(recent_outputs):
+            draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
+        draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
     else:
         draw_menu(draw, capture_menu, selected_index)
 
