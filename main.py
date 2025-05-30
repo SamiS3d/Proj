@@ -10,6 +10,43 @@ import queue
 from luma.core.interface.serial import spi
 from luma.lcd.device import st7735
 from PIL import Image, ImageDraw, ImageFont
+def stop_all_processes():
+    global jamming_process, jamming_active
+    global jamming_detect_process, jamming_detect_active
+    global capture_process, capture_active, capture_bit, recent_outputs
+
+    if jamming_active and jamming_process:
+        try:
+            jamming_process.send_signal(signal.SIGINT)
+            jamming_process.wait(timeout=5)
+            print("✅ Jamming stopped (auto).")
+        except Exception as e:
+            print(f"⚠️ Error stopping Jamming.py: {e}")
+        jamming_process = None
+        jamming_active = False
+
+    if jamming_detect_active and jamming_detect_process:
+        try:
+            jamming_detect_process.send_signal(signal.SIGINT)
+            jamming_detect_process.wait(timeout=5)
+            print("✅ Jamming Detection stopped (auto).")
+        except Exception as e:
+            print(f"⚠️ Error stopping Jammingdetect.py: {e}")
+        jamming_detect_process = None
+        jamming_detect_active = False
+        recent_outputs = []
+
+    if capture_active and capture_process:
+        try:
+            capture_process.send_signal(signal.SIGINT)
+            capture_process.wait(timeout=5)
+            print(f"✅ Capture {capture_bit} stopped (auto).")
+        except Exception as e:
+            print(f"⚠️ Error stopping capture: {e}")
+        capture_process = None
+        capture_active = False
+        capture_bit = None
+        recent_outputs = []
 
 # Initialize ST7735 display
 serial = spi(port=0, device=0, gpio_DC=24, gpio_RST=25, gpio_CS=8)
@@ -220,7 +257,7 @@ while running:
                 else:
                     try:
                         jamming_detect_process = subprocess.Popen(
-                            ["python3", "Jammingdetect.py"],
+                            ["python", "Jammingdetect.py"],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             text=True
@@ -265,7 +302,7 @@ while running:
                         jamming_active = False
                 else:
                     try:
-                        jamming_process = subprocess.Popen(["python3", "Jamming.py"])
+                        jamming_process = subprocess.Popen(["python", "Jamming.py"])
                         jamming_active = True
                         print("🚨 Jamming started.")
                     except Exception as e:
@@ -316,7 +353,7 @@ while running:
                     capture_bit = bit_options[selected_index]
                     try:
                         capture_process = subprocess.Popen(
-                            ["python3", f"recever{capture_bit}.py"],
+                            ["python", f"recever{capture_bit}.py"],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             text=True
