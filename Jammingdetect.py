@@ -19,7 +19,6 @@ def rf_callback(gpio, level, tick):
 
 pi.callback(GPIO_RX, pigpio.EITHER_EDGE, rf_callback)
 
-print("📡 RF Jamming Detection Started (Threshold=2000 pulses/sec)... Ctrl+C to stop\n")
 sys.stdout.flush()
 
 JAMMING_THRESHOLD = 2000  # تم زيادة الحد بوضوح
@@ -34,12 +33,12 @@ try:
         # تحديد حالة الجامينج الجديدة
         if pulses_per_second < JAMMING_THRESHOLD:
             jam_percentage = (pulses_per_second / JAMMING_THRESHOLD) * 100
-            status = "✅ No Jamming (Safe)"
+            status = "No Jamming"
         else:
             jam_percentage = 100
-            status = "🚨 High Jamming!"
+            status = "High Jamming!"
 
-        output = f"Pulses/sec: {pulses_per_second} | Jamming: {jam_percentage:.1f}% | Status: {status}"
+        output = f"J:{jam_percentage:.1f}% | S:{status}"
         print(output)
         sys.stdout.flush()  # ✅ ضروري لعرضها في شاشة TFT عبر subprocess في main.py
 
