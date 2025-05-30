@@ -16,7 +16,7 @@ last_bits_time = 0
 MIN_PULSES = 10
 MAX_STD_DEV = 1200
 MIN_BITS_LEN = 23
-MAX_BITS_LEN = 25
+MAX_BITS_LEN = 24
 REPEAT_SUPPRESSION_MS = 100
 def decode_bits(bits):
     try:
@@ -90,11 +90,12 @@ def process_timings(timings):
         if bits != last_bits or (now_time - last_bits_time) * 1000 > REPEAT_SUPPRESSION_MS:
             dec_val, hex_val = decode_bits(bits)
             now = time.strftime("%H:%M:%S", time.localtime())
-            print(f"🟢 [{now}] Received bits: {bits}")
-            print(f"   ➕ Decimal: {dec_val}, Hex: {hex_val}")
+            # إخراج موجز للشاشة
+            output = f"Bits: {bits[:10]}... Dec: {dec_val}"
+            print(output)  # إخراج موجز للـ stdout
             last_bits = bits
             last_bits_time = now_time
-
+            
 pi.callback(GPIO_PIN, pigpio.EITHER_EDGE, rf_callback)
 pi.set_watchdog(GPIO_PIN, 10)
 

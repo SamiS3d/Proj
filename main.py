@@ -115,21 +115,33 @@ def draw_jamming_page(draw):
     else:
         draw.text((15, 50), "Start", font=font, fill=BLUE if selected_index == 0 else WHITE)
         draw.text((15, 80), "Exit", font=small_font, fill=BLUE if selected_index == 1 else WHITE)
+# متغير عالمي لتخزين آخر الإخراجات
+recent_outputs = []
 
 def draw_capture_page(draw):
+    global recent_outputs
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     if capture_active:
         draw.text((15, 20), f"Capturing {capture_bit}", font=font, fill=BLUE)
         try:
-            latest_output = capture_output.get_nowait() if not capture_output.empty() else None
-            if latest_output:
-                draw.text((15, 50), latest_output[:20], font=small_font, fill=WHITE)  # Truncate to fit
-            draw.text((15, 80), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+            # قراءة الإخراج من الـ Queue
+            while not capture_output.empty():
+                line = capture_output.get_nowait()
+                recent_outputs.append(line)
+                # الحفاظ على آخر 3 أسطر فقط لتجنب التكدس
+                if len(recent_outputs) > 3:
+                    recent_outputs.pop(0)
+            # عرض الإخراج الأخير
+            for i, output in enumerate(recent_outputs):
+                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)  # عرض حتى 20 حرفاً
+            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
         except queue.Empty:
-            pass
+            # إذا كانت الـ Queue فارغة، اعرض الإخراجات المخزنة
+            for i, output in enumerate(recent_outputs):
+                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
+            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
     else:
         draw_menu(draw, capture_menu, selected_index)
-
 def draw_wifi_test_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     draw.text((15, 50), "Test Wifi", font=font, fill=BLUE if selected_index == 0 else WHITE)
