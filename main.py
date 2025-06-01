@@ -65,21 +65,39 @@ def send_rf_key(code):
         if not GPIO.getmode():
             GPIO.setmode(GPIO.BCM)
             print("🔧 Re-initialized GPIO mode to BCM")
+        # تهيئة pin الإرسال فقط
+        GPIO.setup(GPIO_PIN, GPIO.OUT)
         rfdevice = RFDevice(GPIO_PIN)
         rfdevice.enable_tx()
         print(f"📤 Sending code: {code}")
         rfdevice.tx_code(int(code))
         print("✅ Done sending.")
+        # تنظيف pin الإرسال فقط
+        GPIO.cleanup(GPIO_PIN)
+        print("🧹 Cleaned up GPIO pin 20")
     except Exception as e:
         print(f"⚠️ Error sending code: {e}")
     finally:
-        rfdevice.cleanup()
-        # إعادة تهيئة GPIO 16 للجويستيك
+        # إعادة تهيئة GPIO 16 للجويستيك وأبينات الشاشة
         try:
             GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            print("🔧 Re-initialized GPIO 16 for joystick")
+            GPIO.setup(24, GPIO.OUT)  # DC
+            GPIO.setup(25, GPIO.OUT)  # RST
+            GPIO.setup(8, GPIO.OUT)   # CS
+            print("🔧 Re-initialized GPIO pins for joystick and display")
         except Exception as e:
-            print(f"⚠️ Error re-initializing GPIO 16: {e}")
+            print(f"⚠️ Error re-initializing GPIO pins: {e}")
+
+# وظيفة إعادة تهيئة الشاشة
+def reinitialize_display():
+    global device
+    try:
+        serial = spi(port=0, device=0, gpio_DC=24, gpio_RST=25, gpio_CS=8)
+        device = st7735(serial, width=128, height=128, rotate=1)
+        device.backlight(True)
+        print("🖥️ Re-initialized display")
+    except Exception as e:
+        print(f"⚠️ Error re-initializing display: {e}")
 
 # وظيفة إيقاف جميع العمليات
 def stop_all_processes():
@@ -163,7 +181,7 @@ capture_menu = ["24BIT", "32BIT", "64BIT", "128BIT", "Exit"]
 key_action_menu = ["Send", "Delete", "Exit"]
 
 # متغيرات الحالة
-current_menu = "main"
+current_menu = None
 selected_index = 0
 current_page = None
 last_button_state = True
@@ -191,11 +209,11 @@ def read_process_output(process):
 
 # رسم القوائم
 def draw_menu(draw, items, selected):
-    draw.rectangle((0, 0, 127, 127), fill=BLACK)
+    draw.rectangle([0, 0, 127, 127], fill=BLACK)
     for i, item in enumerate(items):
         y = 20 + i * 25
         if i == selected:
-            draw.rectangle((10, y - 2, 117, y + 16), fill=GRAY)
+            draw.rectangle([10, y - 2, 117, y + 16], fill=GRAY)
             draw.text((15, y), item, font=font, fill=BLUE)
         else:
             draw.text((15, y), item, font=font, fill=WHITE)
@@ -251,8 +269,8 @@ def draw_sub_page(draw, title):
         print(f"🔑 Saved keys: {saved_keys}")
         if not saved_keys:
             print("⚠️ No keys saved")
-            draw.text((15, 40), "No keys saved", font=small_font, fill=WHITE)
-            draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+            draw.text((15, 40), "No keys saved", font=font, fill=WHITE)
+            draw.text((15, 100), "Exit", font=font, fill=BLUE if selected_index == 0 else WHITE)
         else:
             for i, (kar_name, key) in enumerate(saved_keys):
                 print(f"🔑 Drawing key {kar_name}: {key}")
@@ -263,15 +281,15 @@ def draw_sub_page(draw, title):
                 else:
                     draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=WHITE)
             draw.text((15, 100), "Select", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
-            draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
+            draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1)
     else:
-        draw.text((15, 80), "Start" if title == "Jamming Detection" else "test", font=small_font, fill=WHITE)
+        draw.text((15, 80), "Start" if title == "Jamming Detection" else "Test", font=small_font, fill=WHITE)
         draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
 
 def draw_jamming_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     if jamming_active:
-        draw.text((15, 30), "Jamming Active", font=font, fill=BLUE)
+        draw.text((15, 30), "Jamming active", font=font, fill=BLUE)
         draw.text((15, 80), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
     else:
         draw.text((15, 50), "Start", font=font, fill=BLUE if selected_index == 0 else WHITE)
@@ -306,24 +324,35 @@ def draw_key_action_page(draw, kar_name, key_val):
         y = 60 + i * 20
         if i == selected_index:
             draw.rectangle((10, y - 2, 117, y + 12), fill=GRAY)
-            draw.text((15, y), item, font=small_font, fill=BLUE)
+            draw.text((15, y), item, font=font, fill=BLUE)
         else:
-            draw.text((15, y), item, font=small_font, fill=WHITE)
+            draw.text((15, y), item, font=font, fill=WHITE)
 
 # الحلقة الرئيسية
 running = True
 while running:
     try:
+        # التأكد من إعداد الـ GPIO
+        if not GPIO.getmode():
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            GPIO.setup(24, GPIO.OUT)  # DC
+            GPIO.setup(25, GPIO.OUT)  # RST
+            GPIO.setup(8, GPIO.OUT)   # CS
+            print("🔧 Re-initialized GPIO mode and pins")
+        
         vrx = read_adc(0)
         vry = read_adc(1)
         button_state = GPIO.input(16)
-    except RuntimeError as e:
-        print(f"⚠️ GPIO Error: {e}")
-        # إعادة تهيئة الـ GPIO
+    except Exception as e:
+        print(f"⚠️ GPIO error: {e}")
         try:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            print("🔧 Re-initialized GPIO 16")
+            GPIO.setup(24, GPIO.OUT)
+            GPIO.setup(25, GPIO.OUT)
+            GPIO.setup(8, GPIO.OUT)
+            print("🔧 Re-initialized GPIO pins")
             button_state = True  # تجنب الضغطات الخاطئة
         except Exception as e:
             print(f"⚠️ Error re-initializing GPIO: {e}")
@@ -346,7 +375,7 @@ while running:
                 selected_index = min(len(capture_menu) - 1, selected_index + 1)
             elif current_menu == "jamming" or current_menu == "wifi":
                 selected_index = min(1, selected_index + 1)
-            elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
+            elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"]:
                 saved_keys = get_saved_keys()
                 selected_index = min(len(saved_keys) + 1, selected_index + 1)
             elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
@@ -401,14 +430,15 @@ while running:
                             stderr=subprocess.STDOUT,
                             text=True
                         )
-                        threading.Thread(target=read_process_output, args=(jamming_detect_process,), daemon=True).start()
+                        threading.Thread(target=read_process_output, daemon=True).start()
                         jamming_detect_active = True
-                        print("🚨 Jamming Detection started.")
+                        print("✅ Jamming started.")
                     except Exception as e:
-                        print(f"⚠️ Error starting Jammingdetect.py: {e}")
+                        print(f"⚠️ Error starting Jamming Detection: {e}")
             elif selected_index == 1:  # Captcher My RF kye
                 current_menu = "capture"
                 previous_menu = "security"
+                selected_index = security_menu[selected_index]
                 selected_index = 0
             elif selected_index == 3:  # Reuse My RF kye
                 print("🔄 Entering Reuse My RF kye (security)")
@@ -421,7 +451,7 @@ while running:
                 current_page = security_menu[selected_index]
                 selected_index = 0
         elif current_menu == "attack":
-            if selected_index == len(attack_menu) - 1:
+            if selected_index == len(attack_menu) - 1:  # Exit
                 current_menu = "main"
                 selected_index = 2
             elif selected_index == 0:  # Jamming
@@ -446,13 +476,13 @@ while running:
                 if jamming_active:
                     if jamming_process:
                         try:
-                            jamming_process.send_signal(signal.SIGINT)
+                            jamming_process.send_signal(signal.SIGINT))
                             jamming_process.wait(timeout=5)
                             print("✅ Jamming stopped.")
-                        except Exception as e:
-                            print(f"⚠️ Error stopping Jamming.py: {e}")
-                        jamming_process = None
-                        jamming_active = False
+                            except Exception as e:
+                                print(f"⚠️ Error stopping Jamming.py: {e}")
+                            jamming_process = None
+                            jamming_active = False
                 else:
                     try:
                         stop_all_processes()
@@ -463,21 +493,21 @@ while running:
                             text=True
                         )
                         jamming_active = True
-                        print("🚨 Jamming started.")
-                    except Exception as e:
-                        print(f"⚠️ Error starting Jamming.py: {e}")
-            elif selected_index == 1:
-                if jamming_active and jamming_process:
-                    try:
-                        jamming_process.send_signal(signal.SIGINT)
-                        jamming_process.wait()
-                        print("✅ Jamming stopped.")
-                    except Exception as e:
-                        print(f"⚠️ Error stopping Jamming.py: {e}")
-                    jamming_process = None
-                    jamming_active = False
-                current_menu = "attack"
-                selected_index = 0
+                        print("✅ Jamming started.")
+                            except Exception as e:
+                                print(f"⚠️ Error starting Jamming.py: {e}")
+                    elif selected_index == 1:
+                        if jamming_active and jamming_process:
+                            try:
+                                jamming_process.send_signal(signal.SIGINT)
+                                jamming_process.wait(timeout=5)
+                                print("✅ Jamming stopped.")
+                                except Exception as e:
+                                    print(f"⚠️ Error stopping Jamming.py: {e}")
+                                jamming_process = None
+                                jamming_active = False
+                            current_menu = "attack"
+                            selected_index = 0
         elif current_menu == "capture":
             if selected_index == len(capture_menu) - 1:  # Exit
                 if capture_active and capture_process:
@@ -485,143 +515,150 @@ while running:
                         capture_process.send_signal(signal.SIGINT)
                         capture_process.wait(timeout=5)
                         print(f"✅ Capturing {capture_bit} stopped.")
-                    except Exception as e:
-                        print(f"⚠️ Error stopping recever{capture_bit.lower()}.py: {e}")
-                    capture_process = None
-                    capture_active = False
-                    capture_bit = None
-                    selecting_key = True
-                current_menu = previous_menu
-                selected_index = 1
-            elif capture_active:
-                if selected_index == 0:  # Stop
-                    if capture_process:
-                        try:
-                            capture_process.send_signal(signal.SIGINT)
-                            capture_process.wait(timeout=5)
-                            print(f"✅ Capturing {capture_bit} stopped.")
                         except Exception as e:
-                            print(f"⚠️ Error stopping recever{capture_bit.lower()}.py: {e}")
+                            print(f"⚠️ Error stopping recever{capture_bit}.lower().py: {e}")
                         capture_process = None
                         capture_active = False
                         capture_bit = None
                         selecting_key = True
-            else:
-                if selected_index in [0, 1, 2, 3]:  # 24BIT, 32BIT, 64BIT, 128BIT
-                    bit_options = ["24", "32", "64", "128"]
-                    capture_bit = bit_options[selected_index]
-                    stop_all_processes()
-                    try:
-                        capture_process = subprocess.Popen(
-                            ["python3", os.path.join(BASE_DIR, f"recever{capture_bit}.py")],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            text=True
-                        )
-                        threading.Thread(target=read_process_output, args=(capture_process,), daemon=True).start()
-                        capture_active = True
-                        print(f"🚨 Capturing {capture_bit} started.")
-                    except Exception as e:
-                        print(f"⚠️ Error starting recever{capture_bit}.py: {e}")
-        elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
-            saved_keys = get_saved_keys()
-            if selected_index < len(saved_keys):  # اختيار رمز
-                key = saved_keys[selected_index][1]
-                key_name = save_key(key)
-                print(f"✅ Key saved as {key_name}: {key}")
-            elif selected_index == len(saved_keys) + 1:  # Exit
-                selecting_key = False
-                current_menu = previous_menu
-                selected_index = 1
-        elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
-            saved_keys = get_saved_keys()
-            if selected_index < len(saved_keys):  # اختيار رمز
-                selected_key = saved_keys[selected_index]
-                current_menu = "key_action"
-                selected_index = 0
-            elif selected_index == len(saved_keys):  # Select
-                pass  # منطق إضافي إذا لزم
-            elif selected_index == len(saved_keys) + 1:  # Exit
-                current_menu = previous_menu
-                selected_index = 3
-        elif current_menu == "key_action":
-            if selected_index == 0:  # Send
-                if selected_key:
-                    send_rf_key(selected_key[1])
-                current_menu = previous_menu
-                current_page = "Reuse My RF kye"
-                selected_index = 0
-            elif selected_index == 1:  # Delete
-                if selected_key:
-                    delete_key(selected_key[0])
-                current_menu = previous_menu
-                current_page = "Reuse My RF kye"
-                selected_index = 0
-            elif selected_index == 2:  # Exit
-                current_menu = previous_menu
-                current_page = "Reuse My RF kye"
-                selected_index = 0
-        elif current_menu == "wifi":
-            if selected_index == 1:
-                current_menu = "main"
-                selected_index = 3
-        elif current_menu in ["info", "security_sub", "attack_sub"]:
-            if selected_index == 0:
-                if current_menu == "info":
-                    current_menu = "main"
-                    selected_index = 0
-                elif current_menu == "security_sub":
-                    current_menu = "security"
-                    selected_index = 0
-                elif current_menu == "attack_sub":
-                    current_menu = "attack"
-                    selected_index = 0
+                    current_menu = previous_menu
+                    selected_index = 1
+                elif capture_active:
+                    if selected_index == 0:  # Stop
+                        selected_index = 0
+                            if capture_process:
+                                try:
+                                    capture_process.send_signal(signal.SIGINT)
+                                    capture_process.wait(timeout=5)
+                                    print(f"✅ Capturing {capture_bit} stopped.")
+                                    except Exception as e:
+                                        print(f"⚠️ Error stopping recever{capture_bit}.lower().py: {e}")
+                                    capture_process = None
+                                capture_active = False
+                            capture_bit = None
+                        selecting_key = True
+                else:
+                    if selected_index in [0, 1, 2, 3]:  # 24BIT, 32BIT, 64BIT, 128BIT
+                        bit_options = ["24", "32", "64", "128"]
+                        capture_bit = bit_options[selected_index]]
+                        stop_all_processes()
+                        try:
+                            capture_process = subprocess.Popen(
+                                ["python3", os.path.join(BASE_DIR, f"recever{capture_bit}.py")],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                text=True
+                            )
+                            threading.Thread(target=read_process_output, args=(capture_process,), daemon=True).start()
+                            capture_active = True
+                            print(f"🚗 Capturing {capture_bit} started.")
+                            except Exception as e:
+                                print(f"⚠️ Error starting recever{capture_bit}.py: {e}")
+                            elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
+                                saved_keys = get_saved_keys()
+                                if selected_index < len(saved_keys):  # 選擇 Key
+                                    key = saved_keys[selected_index][1]
+                                    key_name = save_key(key)
+                                    print(f"✅ Key saved as: {key_name}: {key}")
+                                    elif selected_index == len(saved_keys): + 1:  # Exit
+                                        selecting_key = False
+                                    current_menu = previous_menu
+                                    selected_index = 1
+                                elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
+                                    saved_keys = get_saved_keys()
+                                    if selected_index < len(saved_keys):  # Key selected
+                                        selected_key = saved_keys[selected_index]
+                                        current_menu = "key_action"
+                                        selected_index = 0
+                                    elif selected_index == len(saved_keys):  # Select
+                                        pass  # Additional logic if needed
+                                    elif selected_index == len(saved_keys) + 1:  # Exit
+                                        current_menu = previous_menu
+                                        selected_index = 0
+                                    elif current_menu == "key_action":
+                                        if selected_index == 0:  # Send
+                                            if selected_key:
+                                                send_rf_key(selected_key[1]))
+                                            current_menu = previous_menu
+                                            current_page = "Reuse My RF kye"
+                                            selected_index = 0
+                                        elif selected_index == 1:  # Delete
+                                            if selected_key:
+                                                delete_key(selected_key[0])
+                                            current_menu = previous_menu
+                                            current_page = "Reuse My RF kye"
+                                            selected_index = 0
+                                        else selected_index == 2:  # Exit
+                                            current_menu = previous_menu
+                                            current_page = "Reuse My RF kye"
+                                            selected_index = 0
+                                        elif current_menu == "wifi":
+                                            if selected_index == 1:
+                                                current_menu = "main"
+                                                selected_index = 1
+                                            elif current_menu in ["info", "security_sub", "attack_sub"]:
+                                                if selected_index == 0:
+                                                    if current_menu == "info":
+                                                        current_menu = "main"
+                                                        selected_index = 0
+                                                    elif current_menu == "security_sub":
+                                                        current_menu = "security"
+                                                        selected_index = 0
+                                                    else current_menu == "attack_sub":
+                                                        current_menu = "attack"
+                                                        selected_index = 0
 
     last_button_state = button_state
 
-    with canvas(device) as draw:
-        if current_menu == "main":
-            draw_menu(draw, main_menu, selected_index)
-        elif current_menu == "security":
-            draw_menu(draw, security_menu, selected_index)
-        elif current_menu == "attack":
-            draw_menu(draw, attack_menu, selected_index)
-        elif current_menu == "info":
-            draw_info_page(draw)
-        elif current_menu == "jamming":
-            draw_jamming_page(draw)
-        elif current_menu == "capture":
-            draw_capture_page(draw)
-        elif current_menu in ["security_sub", "attack_sub"]:
-            draw_sub_page(draw, current_page)
-        elif current_menu == "wifi":
-            draw_wifi_test_page(draw)
-        elif current_menu == "key_action":
-            draw_key_action_page(draw, selected_key[0], selected_key[1])
+    try:
+        with canvas(device) as draw:
+                if current_menu == "main":
+                    draw_menu(draw, main_menu, selected_index)
+                elif current_menu == "security":
+                    draw_menu(draw, security_menu, selected_index)
+                elif current_menu == "attack":
+                    draw_menu(draw, attack_menu, selected_index)
+                elif current_menu == "info":
+                    draw_info_page(draw)
+                elif current_menu == "jamming":
+                    draw_jamming_page(draw)
+                elif current_menu == "j":
+                    capture:
+                        draw_capture_page(draw)
+                        elif current_menu in ["capture", "security_sub", "attack_sub"]:
+                            draw_sub_page(draw_text, current_page)
+                        elif current_menu == "wifi":
+                            draw_wifi_page(draw)
+                            elif current_menu == "wifkey_action":
+                                draw_key_action_page(draw, selected_key[0], selected_key[1])
+                        except Exception as e:
+                                print(f"⚠️ Error drawing: {e}")
+                                reinitialize_display()
+                                time.sleep(0.0.1)
 
-    time.sleep(0.01)
-
-# التنظيف
-if jamming_active and jamming_process:
-    try:
-        jamming_process.send_signal(signal.SIGINT)
-        jamming_process.wait(timeout=5)
-        print("✅ Jamming stopped during cleanup.")
-    except Exception as e:
-        print(f"⚠️ Error during jamming cleanup: {e}")
-if capture_active and capture_process:
-    try:
-        capture_process.send_signal(signal.SIGINT)
-        capture_process.wait(timeout=5)
-        print(f"✅ Capturing {capture_bit} stopped during cleanup.")
-    except Exception as e:
-        print(f"⚠️ Error during capture cleanup: {e}")
-if jamming_detect_active and jamming_detect_process:
-    try:
-        jamming_detect_process.send_signal(signal.SIGINT)
-        jamming_detect_process.wait(timeout=5)
-        print("✅ Jamming Detection stopped during cleanup.")
-    except Exception as e:
-        print(f"⚠️ Error during jamming detect cleanup: {e}")
-GPIO.cleanup()
-device.cleanup()
+                                # التنظيف
+                                if jamming_active and jamming_process:
+                                    try:
+                                        jamming_process.send_signal(signal.SIGINT))
+                                        jamming_process.wait(timeout=5)
+                                        print("✅ Jamming stopped during cleanup.")
+                                        except Exception as e:
+                                            print(f"⚠️ during cleanup: {e}")
+                                        if capture_active:
+                                            capture_process and capture_process:
+                                            try:
+                                                    capture_process.send_signal(signal.SIGINT)
+                                                    capture_process.wait(timeout=5)
+                                                    print(f"✅ Capturing {capture_bit} stopped during cleanup.")
+                                                    except Exception as e:
+                                                        print(f"⚠️ Error during capture cleanup: {e}")
+                                                    if jamming_detect_active:
+                                                        and jamming_detect_process:
+                                                            try:
+                                                                jamming_detect_process.send_signal(signal.SIGINT)
+                                                                jamming_detect_process.wait(timeout=5)
+                                                                print("✅ Jamming Detection stopped during cleanup.")
+                                                                except Exception as e:
+                                                                    print(f"⚠️ Error during cleanup: {e}")
+                                                                GPIO.cleanup([2, 4, 6, 8, 16, 24, 25])
+                                                                device.cleanup()
