@@ -567,22 +567,25 @@ while running:
                 current_menu = previous_menu
                 selected_index = 3
         elif current_menu == "key_action":
-            if selected_index == 0:
+            if selected_index == 0:  # Send
                 if selected_key:
                     send_rf_key(selected_key[1])
-                current_menu = previous_menu
+                # الرجوع إلى Reuse My RF kye
+                current_menu = "security_sub" if previous_menu == "security" else "attack_sub"
                 current_page = "Reuse My RF kye"
                 selected_index = 0
-            elif selected_index == 1:
+            elif selected_index == 1:  # Delete
                 if selected_key:
                     delete_key(selected_key[0])
-                current_menu = previous_menu
+                # الرجوع إلى Reuse My RF kye
+                current_menu = "security_sub" if previous_menu == "security" else "attack_sub"
                 current_page = "Reuse My RF kye"
                 selected_index = 0
-            elif selected_index == 2:
+            elif selected_index == 2:  # Exit
+                # الرجوع خطوة واحدة لورا
                 current_menu = previous_menu
-                current_page = "Reuse My RF kye"
-                selected_index = 0
+                current_page = None
+                selected_index = 3  # نرجع لخيار Reuse My RF kye
         elif current_menu == "wifi":
             if selected_index == 1:
                 current_menu = "main"
