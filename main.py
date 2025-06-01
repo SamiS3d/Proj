@@ -1,4 +1,7 @@
 from luma.core.render import canvas
+from luma.core.interface.serial import spi  # تأكد إن هذا السطر موجود
+from luma.lcd.device import st7735
+from PIL import Image, ImageDraw, ImageFont
 import time
 import smbus2
 import RPi.GPIO as GPIO
@@ -8,9 +11,8 @@ import os
 from rpi_rf import RFDevice
 import threading
 import queue
-from luma.lcd.device import st7735
-from PIL import Image, ImageDraw, ImageFont
 
+# تحديد المسار الأساسي
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # وظيفة لحفظ الرموز في ملف
@@ -310,10 +312,10 @@ while running:
                 selected_index = min(1, selected_index + 1)
             elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
                 saved_keys = get_saved_keys()
-                selected_index = min(len(saved_keys) + 1, selected_index + 1)  # +1 for Exit
+                selected_index = min(len(saved_keys) + 1, selected_index + 1)
             elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
                 saved_keys = get_saved_keys()
-                selected_index = min(len(saved_keys) + 2, selected_index + 1)  # +2 for Send and Delete
+                selected_index = min(len(saved_keys) + 2, selected_index + 1)
             last_move_time = current_time
 
     if button_state == False and last_button_state == True:
@@ -495,7 +497,7 @@ while running:
                 selected_index = 1
         elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
             saved_keys = get_saved_keys()
-            if selected_index < len(saved_keys):  # اختيار رمز
+            if selected_index < len(saved_keys):  # إرسال رمز
                 kar_name, key_val = saved_keys[selected_index]
                 send_rf_key(key_val)
                 selected_index = 0  # ابقى في نفس الصفحة بعد الإرسال
