@@ -1,6 +1,26 @@
 import pigpio
 import time
 import sys
+import os
+
+# تحديد المسار الأساسي
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# وظيفة لحفظ الرموز في ملف (من الكود الأول)
+def save_key(key):
+    count = get_saved_keys_count() + 1
+    kar_name = f"kar{count}"
+    with open(os.path.join(BASE_DIR, "keys.txt"), "a") as f:
+        f.write(f"{kar_name}:{key}\n")
+    return kar_name
+
+# وظيفة لقراءة عدد الرموز المحفوظة (من الكود الأول)
+def get_saved_keys_count():
+    try:
+        with open(os.path.join(BASE_DIR, "keys.txt"), "r") as f:
+            return len(f.readlines())
+    except FileNotFoundError:
+        return 0
 
 GPIO_PIN = 21
 pi = pigpio.pi()
@@ -90,12 +110,16 @@ def process_timings(timings):
         now_time = time.time()
         if bits != last_bits or (now_time - last_bits_time) * 1000 > REPEAT_SUPPRESSION_MS:
             dec_val, hex_val = decode_bits(bits)
-            now = time.strftime("%H:%M:%S", time.localtime())
-            output = f"{dec_val}"
-            print(output)
-            sys.stdout.flush()  # هذا ضروري حتى تظهر النتيجة فورًا
-            last_bits = bits
-            last_bits_time = now_time
+            if dec_val is not None:
+                now = time.strftime("%H:%M:%S", time.localtime())
+                output = f"{dec_val}"
+                print(f"📡 Received code: {output}")
+                # حفظ الرمز في ملف keys.txt
+                key_name = save_key(output)
+                print(f"✅ Key saved as {key_name}: {output}")
+                sys.stdout.flush()
+                last_bits = bits
+                last_bits_time = now_time
 
 # إعداد الاستماع
 pi.callback(GPIO_PIN, pigpio.EITHER_EDGE, rf_callback)
