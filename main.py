@@ -11,6 +11,7 @@ import os
 from rpi_rf import RFDevice
 import threading
 import queue
+import psutil
 
 # تحديد المسار الأساسي
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -101,6 +102,7 @@ def stop_all_processes():
     global jamming_detect_process, jamming_detect_active
     global capture_process, capture_active, capture_bit, recent_outputs
 
+    # إيقاف Jamming
     if jamming_active and jamming_process:
         try:
             jamming_process.send_signal(signal.SIGINT)
@@ -111,6 +113,7 @@ def stop_all_processes():
         jamming_process = None
         jamming_active = False
 
+    # إيقاف Jamming Detection
     if jamming_detect_active and jamming_detect_process:
         try:
             jamming_detect_process.send_signal(signal.SIGINT)
@@ -122,6 +125,7 @@ def stop_all_processes():
         jamming_detect_active = False
         recent_outputs = []
 
+    # إيقاف Capture
     if capture_active and capture_process:
         try:
             capture_process.send_signal(signal.SIGINT)
@@ -133,6 +137,39 @@ def stop_all_processes():
         capture_active = False
         capture_bit = None
         recent_outputs = []
+
+    # تنظيف أي عمليات متبقية
+    try:
+        for proc in psutil.process_iter(['pid', 'name']):
+            if 'python3' in proc.info['name'] and any(
+                x in proc.cmdline() for x in ['recever24.py', 'recever32.py', 'recever64.py', 'recever128.py']
+            ):
+                proc.send_signal(signal.SIGTERM)
+                proc.wait(timeout=5)
+                print(f"🧹 Terminated stray receiver process: {proc.info['name']}")
+    except Exception as e:
+        print(f"⚠️ Error terminating stray processes: {e}")
+
+    # إعادة تشغيل pigpiod لو معلّق
+    try:
+        subprocess.run(["sudo", "pkill", "pigpiod"], check=True)
+        time.sleep(0.5)
+        subprocess.run(["sudo", "pigpiod"], check=True)
+        print("🔄 Restarted pigpiod daemon")
+    except Exception as e:
+        print(f"⚠️ Error restarting pigpiod: {e}")
+
+    # تنظيف الـ GPIO
+    try:
+        GPIO.cleanup([20, 16, 24, 25, 8])
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(24, GPIO.OUT)
+        GPIO.setup(25, GPIO.OUT)
+        GPIO.setup(8, GPIO.OUT)
+        print("🧹 Cleaned and re-initialized GPIO pins")
+    except Exception as e:
+        print(f"⚠️ Error cleaning GPIO: {e}")
 
 # تهيئة الشاشة ST7735
 serial = spi(port=0, device=0, gpio_DC=24, gpio_RST=25, gpio_CS=8)
@@ -197,11 +234,14 @@ previous_menu = None
 selected_key = None
 
 # وظيفة لقراءة مخرجات العملية
-def read_process_output(process):
-    while process.poll() is None:
-        line = process.stdout.readline()
-        if line:
-            capture_output.put(line.strip())
+def read_process_output(process, output_queue):
+    try:
+        while process.poll() is None:
+            line = process.stdout.readline()
+            if line:
+                output_queue.put(line.strip())
+    except Exception as e:
+        print(f"⚠️ Error reading process output: {e}")
 
 # رسم القوائم
 def draw_menu(draw, items, selected):
@@ -296,11 +336,14 @@ def draw_capture_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     if capture_active:
         draw.text((15, 20), f"Capturing {capture_bit}", font=font, fill=BLUE)
-        while not capture_output.empty():
-            line = capture_output.get_nowait()
-            recent_outputs.append(line)
-            if len(recent_outputs) > 3:
-                recent_outputs.pop(0)
+        try:
+            while not capture_output.empty():
+                line = capture_output.get_nowait()
+                recent_outputs.append(line)
+                if len(recent_outputs) > 3:
+                    recent_outputs.pop(0)
+        except queue.Empty:
+            pass
         for i, output in enumerate(recent_outputs):
             draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
         draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
@@ -425,7 +468,7 @@ while running:
                             stderr=subprocess.STDOUT,
                             text=True
                         )
-                        threading.Thread(target=read_process_output, args=(jamming_detect_process,), daemon=True).start()
+                        threading.Thread(target=read_process_output, args=(jamming_detect_process, capture_output), daemon=True).start()
                         jamming_detect_active = True
                         print("🚨 Jamming Detection started.")
                     except Exception as e:
@@ -434,6 +477,7 @@ while running:
                 current_menu = "capture"
                 previous_menu = "security"
                 selected_index = 0
+                recent_outputs = []  # تنظيف مخرجات الـ capture السابقة
             elif selected_index == 3:
                 print("🔄 Entering Reuse My RF kye (security)")
                 current_menu = "security_sub"
@@ -455,6 +499,7 @@ while running:
                 current_menu = "capture"
                 previous_menu = "attack"
                 selected_index = 0
+                recent_outputs = []  # تنظيف مخرجات الـ capture السابقة
             elif selected_index == 3:
                 print("🔄 Entering Reuse My RF kye (attack)")
                 current_menu = "attack_sub"
@@ -503,7 +548,7 @@ while running:
                 current_menu = "attack"
                 selected_index = 0
         elif current_menu == "capture":
-            if selected_index == len(capture_menu) - 1:
+            if selected_index == len(capture_menu) - 1:  # Exit
                 if capture_active and capture_process:
                     try:
                         capture_process.send_signal(signal.SIGINT)
@@ -514,11 +559,12 @@ while running:
                     capture_process = None
                     capture_active = False
                     capture_bit = None
-                    selecting_key = True
+                    recent_outputs = []
+                stop_all_processes()  # تنظيف كامل قبل الخروج
                 current_menu = previous_menu
                 selected_index = 1
             elif capture_active:
-                if selected_index == 0:
+                if selected_index == 0:  # Stop
                     if capture_process:
                         try:
                             capture_process.send_signal(signal.SIGINT)
@@ -529,24 +575,30 @@ while running:
                         capture_process = None
                         capture_active = False
                         capture_bit = None
-                        selecting_key = True
+                        recent_outputs = []
+                    stop_all_processes()  # تنظيف كامل بعد التوقف
             else:
-                if selected_index in [0, 1, 2, 3]:
+                if selected_index in [0, 1, 2, 3]:  # Start capture
                     bit_options = ["24", "32", "64", "128"]
                     capture_bit = bit_options[selected_index]
-                    stop_all_processes()
+                    stop_all_processes()  # تنظيف كامل قبل البدء
                     try:
+                        capture_output = queue.Queue()  # إعادة إنشاء الـ queue
                         capture_process = subprocess.Popen(
                             ["python3", os.path.join(BASE_DIR, f"recever{capture_bit}.py")],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             text=True
                         )
-                        threading.Thread(target=read_process_output, args=(capture_process,), daemon=True).start()
+                        threading.Thread(target=read_process_output, args=(capture_process, capture_output), daemon=True).start()
                         capture_active = True
                         print(f"🚨 Capturing {capture_bit} started.")
                     except Exception as e:
                         print(f"⚠️ Error starting recever{capture_bit}.py: {e}")
+                        capture_process = None
+                        capture_active = False
+                        capture_bit = None
+                        stop_all_processes()  # تنظيف لو صار خطأ
         elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
             saved_keys = get_saved_keys()
             if selected_index < len(saved_keys):
@@ -570,22 +622,19 @@ while running:
             if selected_index == 0:  # Send
                 if selected_key:
                     send_rf_key(selected_key[1])
-                # الرجوع إلى Reuse My RF kye
                 current_menu = "security_sub" if previous_menu == "security" else "attack_sub"
                 current_page = "Reuse My RF kye"
                 selected_index = 0
             elif selected_index == 1:  # Delete
                 if selected_key:
                     delete_key(selected_key[0])
-                # الرجوع إلى Reuse My RF kye
                 current_menu = "security_sub" if previous_menu == "security" else "attack_sub"
                 current_page = "Reuse My RF kye"
                 selected_index = 0
             elif selected_index == 2:  # Exit
-                # الرجوع خطوة واحدة لورا
                 current_menu = previous_menu
                 current_page = None
-                selected_index = 3  # نرجع لخيار Reuse My RF kye
+                selected_index = 3
         elif current_menu == "wifi":
             if selected_index == 1:
                 current_menu = "main"
@@ -631,26 +680,6 @@ while running:
     time.sleep(0.01)
 
 # التنظيف
-if jamming_active and jamming_process:
-    try:
-        jamming_process.send_signal(signal.SIGINT)
-        jamming_process.wait(timeout=5)
-        print("✅ Jamming stopped during cleanup.")
-    except Exception as e:
-        print(f"⚠️ Error during jamming cleanup: {e}")
-if capture_active and capture_process:
-    try:
-        capture_process.send_signal(signal.SIGINT)
-        capture_process.wait(timeout=5)
-        print(f"✅ Capturing {capture_bit} stopped during cleanup.")
-    except Exception as e:
-        print(f"⚠️ Error during capture cleanup: {e}")
-if jamming_detect_active and jamming_detect_process:
-    try:
-        jamming_detect_process.send_signal(signal.SIGINT)
-        jamming_detect_process.wait(timeout=5)
-        print("✅ Jamming Detection stopped during cleanup.")
-    except Exception as e:
-        print(f"⚠️ Error during jamming detect cleanup: {e}")
+stop_all_processes()
 GPIO.cleanup([16, 24, 25, 8])
 device.cleanup()
