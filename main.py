@@ -1,5 +1,5 @@
 from luma.core.render import canvas
-from luma.core.interface.serial import spi  # تأكد إن هذا السطر موجود
+from luma.core.interface.serial import spi
 from luma.lcd.device import st7735
 from PIL import Image, ImageDraw, ImageFont
 import time
@@ -49,7 +49,7 @@ def get_saved_keys():
 def delete_key(kar_name):
     try:
         keys = get_saved_keys()
-        keys = [key for key in keys if key[0] != kar_name]  # إزالة الرمز المطلوب
+        keys = [key for key in keys if key[0] != kar_name]
         with open(os.path.join(BASE_DIR, "keys.txt"), "w") as f:
             for kar_name, key_val in keys:
                 f.write(f"{kar_name}:{key_val}\n")
@@ -60,9 +60,13 @@ def delete_key(kar_name):
 # وظيفة إرسال الرمز باستخدام rpi_rf
 def send_rf_key(code):
     GPIO_PIN = 20
-    rfdevice = RFDevice(GPIO_PIN)
-    rfdevice.enable_tx()
     try:
+        # التأكد من إعداد الـ GPIO
+        if not GPIO.getmode():
+            GPIO.setmode(GPIO.BCM)
+            print("🔧 Re-initialized GPIO mode to BCM")
+        rfdevice = RFDevice(GPIO_PIN)
+        rfdevice.enable_tx()
         print(f"📤 Sending code: {code}")
         rfdevice.tx_code(int(code))
         print("✅ Done sending.")
@@ -70,6 +74,12 @@ def send_rf_key(code):
         print(f"⚠️ Error sending code: {e}")
     finally:
         rfdevice.cleanup()
+        # إعادة تهيئة GPIO 16 للجويستيك
+        try:
+            GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            print("🔧 Re-initialized GPIO 16 for joystick")
+        except Exception as e:
+            print(f"⚠️ Error re-initializing GPIO 16: {e}")
 
 # وظيفة إيقاف جميع العمليات
 def stop_all_processes():
@@ -150,6 +160,7 @@ main_menu = ["Info", "Security part", "Attack part", "Wifi Test"]
 security_menu = ["Jamming Detection", "Captcher My RF kye", "Captcher My RF kye Rolling", "Reuse My RF kye", "Exit"]
 attack_menu = ["Jamming", "Captcher RF kye", "Captcher RF kye Rolling", "Reuse My RF kye", "Exit"]
 capture_menu = ["24BIT", "32BIT", "64BIT", "128BIT", "Exit"]
+key_action_menu = ["Send", "Delete", "Exit"]
 
 # متغيرات الحالة
 current_menu = "main"
@@ -169,6 +180,7 @@ capture_output = queue.Queue()
 recent_outputs = []
 selecting_key = False
 previous_menu = None
+selected_key = None  # لتخزين الرمز المختار
 
 # وظيفة لقراءة مخرجات العملية
 def read_process_output(process):
@@ -250,9 +262,8 @@ def draw_sub_page(draw, title):
                     draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=BLUE)
                 else:
                     draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=WHITE)
-            draw.text((15, 85), "Send", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
-            draw.text((15, 100), "Delete", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
-            draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 2 else WHITE)
+            draw.text((15, 100), "Select", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
+            draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
     else:
         draw.text((15, 80), "Start" if title == "Jamming Detection" else "test", font=small_font, fill=WHITE)
         draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
@@ -287,12 +298,37 @@ def draw_wifi_test_page(draw):
     draw.text((15, 50), "Test Wifi", font=font, fill=BLUE if selected_index == 0 else WHITE)
     draw.text((15, 80), "Exit", font=small_font, fill=BLUE if selected_index == 1 else WHITE)
 
+def draw_key_action_page(draw, kar_name, key_val):
+    draw.rectangle((0, 0, 127, 127), fill=BLACK)
+    draw.text((15, 20), f"Key: {kar_name}", font=font, fill=WHITE)
+    draw.text((15, 35), f"Value: {key_val}", font=small_font, fill=WHITE)
+    for i, item in enumerate(key_action_menu):
+        y = 60 + i * 20
+        if i == selected_index:
+            draw.rectangle((10, y - 2, 117, y + 12), fill=GRAY)
+            draw.text((15, y), item, font=small_font, fill=BLUE)
+        else:
+            draw.text((15, y), item, font=small_font, fill=WHITE)
+
 # الحلقة الرئيسية
 running = True
 while running:
-    vrx = read_adc(0)
-    vry = read_adc(1)
-    button_state = GPIO.input(16)
+    try:
+        vrx = read_adc(0)
+        vry = read_adc(1)
+        button_state = GPIO.input(16)
+    except RuntimeError as e:
+        print(f"⚠️ GPIO Error: {e}")
+        # إعادة تهيئة الـ GPIO
+        try:
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            print("🔧 Re-initialized GPIO 16")
+            button_state = True  # تجنب الضغطات الخاطئة
+        except Exception as e:
+            print(f"⚠️ Error re-initializing GPIO: {e}")
+            button_state = True
+        vrx, vry = 0, 0
 
     current_time = time.time()
     if current_time - last_move_time > move_delay:
@@ -315,7 +351,9 @@ while running:
                 selected_index = min(len(saved_keys) + 1, selected_index + 1)
             elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
                 saved_keys = get_saved_keys()
-                selected_index = min(len(saved_keys) + 2, selected_index + 1)
+                selected_index = min(len(saved_keys) + 1, selected_index + 1)
+            elif current_menu == "key_action":
+                selected_index = min(len(key_action_menu) - 1, selected_index + 1)
             last_move_time = current_time
 
     if button_state == False and last_button_state == True:
@@ -432,7 +470,7 @@ while running:
                 if jamming_active and jamming_process:
                     try:
                         jamming_process.send_signal(signal.SIGINT)
-                        jamming_process.wait(timeout=5)
+                        jamming_process.wait()
                         print("✅ Jamming stopped.")
                     except Exception as e:
                         print(f"⚠️ Error stopping Jamming.py: {e}")
@@ -497,20 +535,32 @@ while running:
                 selected_index = 1
         elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
             saved_keys = get_saved_keys()
-            if selected_index < len(saved_keys):  # إرسال رمز
-                kar_name, key_val = saved_keys[selected_index]
-                send_rf_key(key_val)
-                selected_index = 0  # ابقى في نفس الصفحة بعد الإرسال
-            elif selected_index == len(saved_keys):  # Send
+            if selected_index < len(saved_keys):  # اختيار رمز
+                selected_key = saved_keys[selected_index]
+                current_menu = "key_action"
+                selected_index = 0
+            elif selected_index == len(saved_keys):  # Select
                 pass  # منطق إضافي إذا لزم
-            elif selected_index == len(saved_keys) + 1:  # Delete
-                if saved_keys:
-                    kar_name, _ = saved_keys[selected_index - len(saved_keys)]
-                    delete_key(kar_name)
-                    selected_index = 0  # إعادة تعيين المؤشر بعد الحذف
-            elif selected_index == len(saved_keys) + 2:  # Exit
+            elif selected_index == len(saved_keys) + 1:  # Exit
                 current_menu = previous_menu
                 selected_index = 3
+        elif current_menu == "key_action":
+            if selected_index == 0:  # Send
+                if selected_key:
+                    send_rf_key(selected_key[1])
+                current_menu = previous_menu
+                current_page = "Reuse My RF kye"
+                selected_index = 0
+            elif selected_index == 1:  # Delete
+                if selected_key:
+                    delete_key(selected_key[0])
+                current_menu = previous_menu
+                current_page = "Reuse My RF kye"
+                selected_index = 0
+            elif selected_index == 2:  # Exit
+                current_menu = previous_menu
+                current_page = "Reuse My RF kye"
+                selected_index = 0
         elif current_menu == "wifi":
             if selected_index == 1:
                 current_menu = "main"
@@ -546,6 +596,8 @@ while running:
             draw_sub_page(draw, current_page)
         elif current_menu == "wifi":
             draw_wifi_test_page(draw)
+        elif current_menu == "key_action":
+            draw_key_action_page(draw, selected_key[0], selected_key[1])
 
     time.sleep(0.01)
 
