@@ -8,7 +8,6 @@ import os
 from rpi_rf import RFDevice
 import threading
 import queue
-from luma.core.interface.serial import spi
 from luma.lcd.device import st7735
 from PIL import Image, ImageDraw, ImageFont
 
@@ -35,7 +34,7 @@ def get_saved_keys():
     try:
         with open(os.path.join(BASE_DIR, "keys.txt"), "r") as f:
             keys = [line.strip().split(":", 1) for line in f.readlines() if ":" in line]
-            print(f"🔍 Read keys: {keys}")  # رسالة تصحيح
+            print(f"🔍 Read keys: {keys}")
             return keys if keys else []
     except FileNotFoundError:
         print("⚠️ keys.txt not found")
@@ -43,6 +42,18 @@ def get_saved_keys():
     except Exception as e:
         print(f"⚠️ Error reading keys.txt: {e}")
         return []
+
+# وظيفة حذف رمز من ملف keys.txt
+def delete_key(kar_name):
+    try:
+        keys = get_saved_keys()
+        keys = [key for key in keys if key[0] != kar_name]  # إزالة الرمز المطلوب
+        with open(os.path.join(BASE_DIR, "keys.txt"), "w") as f:
+            for kar_name, key_val in keys:
+                f.write(f"{kar_name}:{key_val}\n")
+        print(f"🗑️ Deleted key: {kar_name}")
+    except Exception as e:
+        print(f"⚠️ Error deleting key: {e}")
 
 # وظيفة إرسال الرمز باستخدام rpi_rf
 def send_rf_key(code):
@@ -221,24 +232,25 @@ def draw_sub_page(draw, title):
         draw.text((15, 100), "Select", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
         draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
     elif title == "Reuse My RF kye":
-        print("📄 Drawing Reuse My RF kye page")  # رسالة تصحيح
+        print("📄 Drawing Reuse My RF kye page")
         saved_keys = get_saved_keys()
-        print(f"🔑 Saved keys: {saved_keys}")  # طباعة الرموز المحفوظة
-        if not saved_keys:  # إذا كان ملف keys.txt فاضي
+        print(f"🔑 Saved keys: {saved_keys}")
+        if not saved_keys:
             print("⚠️ No keys saved")
             draw.text((15, 40), "No keys saved", font=small_font, fill=WHITE)
             draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
         else:
             for i, (kar_name, key) in enumerate(saved_keys):
-                print(f"🔑 Drawing key {kar_name}: {key}")  # رسالة تصحيح
+                print(f"🔑 Drawing key {kar_name}: {key}")
                 y = 40 + i * 15
                 if i == selected_index:
                     draw.rectangle((10, y - 2, 117, y + 12), fill=GRAY)
                     draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=BLUE)
                 else:
                     draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=WHITE)
-            draw.text((15, 100), "Send", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
-            draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
+            draw.text((15, 85), "Send", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
+            draw.text((15, 100), "Delete", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
+            draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 2 else WHITE)
     else:
         draw.text((15, 80), "Start" if title == "Jamming Detection" else "test", font=small_font, fill=WHITE)
         draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
@@ -301,11 +313,11 @@ while running:
                 selected_index = min(len(saved_keys) + 1, selected_index + 1)  # +1 for Exit
             elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
                 saved_keys = get_saved_keys()
-                selected_index = min(len(saved_keys) + 1, selected_index + 1)  # +1 for Exit
+                selected_index = min(len(saved_keys) + 2, selected_index + 1)  # +2 for Send and Delete
             last_move_time = current_time
 
     if button_state == False and last_button_state == True:
-        print(f"🔄 Current menu: {current_menu}, selected_index: {selected_index}")  # رسالة تصحيح
+        print(f"🔄 Current menu: {current_menu}, selected_index: {selected_index}")
         if current_menu == "main":
             if selected_index == 0:
                 current_menu = "info"
@@ -359,7 +371,7 @@ while running:
                 previous_menu = "security"
                 selected_index = 0
             elif selected_index == 3:  # Reuse My RF kye
-                print("🔄 Entering Reuse My RF kye (security)")  # رسالة تصحيح
+                print("🔄 Entering Reuse My RF kye (security)")
                 current_menu = "security_sub"
                 current_page = security_menu[selected_index]
                 saved_keys = get_saved_keys()
@@ -380,7 +392,7 @@ while running:
                 previous_menu = "attack"
                 selected_index = 0
             elif selected_index == 3:  # Reuse My RF kye
-                print("🔄 Entering Reuse My RF kye (attack)")  # رسالة تصحيح
+                print("🔄 Entering Reuse My RF kye (attack)")
                 current_menu = "attack_sub"
                 current_page = attack_menu[selected_index]
                 saved_keys = get_saved_keys()
@@ -474,7 +486,7 @@ while running:
         elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
             saved_keys = get_saved_keys()
             if selected_index < len(saved_keys):  # اختيار رمز
-                key = saved_keys[selected_index][1]  # استخراج القيمة
+                key = saved_keys[selected_index][1]
                 key_name = save_key(key)
                 print(f"✅ Key saved as {key_name}: {key}")
             elif selected_index == len(saved_keys) + 1:  # Exit
@@ -483,14 +495,18 @@ while running:
                 selected_index = 1
         elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
             saved_keys = get_saved_keys()
-            if selected_index < len(saved_keys):  # إرسال رمز
+            if selected_index < len(saved_keys):  # اختيار رمز
                 kar_name, key_val = saved_keys[selected_index]
                 send_rf_key(key_val)
-                current_menu = previous_menu
-                selected_index = 3
+                selected_index = 0  # ابقى في نفس الصفحة بعد الإرسال
             elif selected_index == len(saved_keys):  # Send
-                pass  # يمكن إضافة منطق إضافي هنا إذا لزم
-            elif selected_index == len(saved_keys) + 1:  # Exit
+                pass  # منطق إضافي إذا لزم
+            elif selected_index == len(saved_keys) + 1:  # Delete
+                if saved_keys:
+                    kar_name, _ = saved_keys[selected_index - len(saved_keys)]
+                    delete_key(kar_name)
+                    selected_index = 0  # إعادة تعيين المؤشر بعد الحذف
+            elif selected_index == len(saved_keys) + 2:  # Exit
                 current_menu = previous_menu
                 selected_index = 3
         elif current_menu == "wifi":
