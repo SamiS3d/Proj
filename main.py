@@ -23,14 +23,14 @@ def save_key(key):
     for kar_name, existing_key in existing_keys:
         if existing_key == key:
             print(f"⚠️ Key {key} already exists as {kar_name}, skipping save.")
-            return kar_name, False
+            return kar_name
     # Save new key if not a duplicate
     count = get_saved_keys_count() + 1
     kar_name = f"kar{count}"
     with open(os.path.join(BASE_DIR, "keys.txt"), "a") as f:
         f.write(f"{kar_name}:{key}\n")
     print(f"✅ Saved new key as {kar_name}: {key}")
-    return kar_name, True
+    return kar_name
 
 # وظيفة لقراءة عدد الرموز المحفوظة
 def get_saved_keys_count():
@@ -246,7 +246,6 @@ recent_outputs = []
 selecting_key = False
 previous_menu = None
 selected_key = None
-last_saved_key = None  # Track last saved key to show status
 
 # وظيفة لقراءة مخرجات العملية
 def read_process_output(process, output_queue):
@@ -254,29 +253,23 @@ def read_process_output(process, output_queue):
         while process.poll() is None:
             line = process.stdout.readline()
             if line:
-                line = line.strip()
-                output_queue.put(line)
-                # Attempt to save the key if it's a valid number
-                try:
-                    key = str(int(line))  # Ensure it's a numeric key
-                    kar_name, saved = save_key(key)
-                    global last_saved_key
-                    last_saved_key = (kar_name, key, saved)
-                except ValueError:
-                    pass  # Skip non-numeric outputs
+                output_queue.put(line.strip())
     except Exception as e:
         print(f"⚠️ Error reading process output: {e}")
 
 # رسم القوائم
 def draw_menu(draw, items, selected):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
+    # Draw header
     draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
     draw.text((5, 3), "Menu", font=font, fill=WHITE)
+    # Draw items
     for i, item in enumerate(items):
         y = 25 + i * 22
         if i == selected:
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=LIGHT_BLUE)
             draw.text((15, y + 3), item, font=small_font, fill=BLACK)
+            # Draw selection icon
             draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
         else:
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=GRAY)
@@ -304,7 +297,7 @@ def draw_info_page(draw):
             draw.text((10, y + 2), line, font=small_font, fill=WHITE)
 
 def draw_sub_page(draw, title):
-    global recent_outputs, selecting_key, last_saved_key
+    global recent_outputs, selecting_key
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
     draw.text((5, 3), title, font=font, fill=WHITE)
@@ -335,54 +328,30 @@ def draw_sub_page(draw, title):
             else:
                 draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
                 draw.text((10, 102), "Stop", font=small_font, fill=WHITE)
-    elif title in ["Captcher My RF kye", "Captcher RF kye"]:
-        if capture_active:
-            draw.text((10, 30), f"Capturing {capture_bit}", font=small_font, fill=LIGHT_BLUE)
-            try:
-                while not capture_output.empty():
-                    line = capture_output.get_nowait()
-                    recent_outputs.append(line)
-                    if len(recent_outputs) > 3:
-                        recent_outputs.pop(0)
-            except queue.Empty:
-                pass
-            for i, output in enumerate(recent_outputs):
-                draw.rounded_rectangle((5, 50 + i * 15, 122, 65 + i * 15), radius=3, fill=GRAY)
-                draw.text((10, 52 + i * 15), output[:20], font=tiny_font, fill=WHITE)
-            if last_saved_key:
-                kar_name, key, saved = last_saved_key
-                status = "Saved" if saved else "Duplicate"
-                draw.text((10, 95), f"{status}: {kar_name} ({key[:10]}...)", font=tiny_font, fill=GREEN if saved else RED)
-            if selected_index == 0:
-                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
-                draw.text((10, 102), "Stop", font=small_font, fill=BLACK)
+    elif title in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
+        saved_keys = get_saved_keys()
+        for i, (kar_name, key) in enumerate(saved_keys):
+            y = 30 + i * 15
+            if i == selected_index:
+                draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=LIGHT_BLUE)
+                draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=BLACK)
+                draw.polygon((8, y + 5, 12, y + 9, 8, y + 13), fill=BLACK)
             else:
-                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
-                draw.text((10, 102), "Stop", font=small_font, fill=WHITE)
+                draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=GRAY)
+                draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=WHITE)
+        select_y = 90 + len(saved_keys) * 15
+        if selected_index == len(saved_keys):
+            draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=LIGHT_BLUE)
+            draw.text((10, select_y + 2), "Select", font=small_font, fill=BLACK)
         else:
-            saved_keys = get_saved_keys()
-            for i, (kar_name, key) in enumerate(saved_keys):
-                y = 30 + i * 15
-                if i == selected_index:
-                    draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=LIGHT_BLUE)
-                    draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=BLACK)
-                    draw.polygon((8, y + 5, 12, y + 9, 8, y + 13), fill=BLACK)
-                else:
-                    draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=GRAY)
-                    draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=WHITE)
-            select_y = 90 + len(saved_keys) * 15
-            if selected_index == len(saved_keys):
-                draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=LIGHT_BLUE)
-                draw.text((10, select_y + 2), "Select", font=small_font, fill=BLACK)
-            else:
-                draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=GRAY)
-                draw.text((10, select_y + 2), "Select", font=small_font, fill=WHITE)
-            if selected_index == len(saved_keys) + 1:
-                draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=RED)
-                draw.text((70, select_y + 2), "Exit", font=small_font, fill=BLACK)
-            else:
-                draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=GRAY)
-                draw.text((70, select_y + 2), "Exit", font=small_font, fill=WHITE)
+            draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=GRAY)
+            draw.text((10, select_y + 2), "Select", font=small_font, fill=WHITE)
+        if selected_index == len(saved_keys) + 1:
+            draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=RED)
+            draw.text((70, select_y + 2), "Exit", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=GRAY)
+            draw.text((70, select_y + 2), "Exit", font=small_font, fill=WHITE)
     elif title == "Reuse My RF kye":
         saved_keys = get_saved_keys()
         if not saved_keys:
@@ -436,7 +405,7 @@ def draw_jamming_page(draw):
     draw.text((5, 3), "Jamming", font=font, fill=WHITE)
     if jamming_active:
         draw.text((10, 40), "Jamming Active", font=font, fill=LIGHT_BLUE)
-        draw.ellipse((90, 35, 100, 45), fill=GREEN)
+        draw.ellipse((90, 35, 100, 45), fill=GREEN)  # Active indicator
         if selected_index == 0:
             draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
             draw.text((10, 102), "Stop", font=small_font, fill=BLACK)
@@ -464,7 +433,7 @@ def draw_capture_page(draw):
     draw.text((5, 3), "Capture RF", font=font, fill=WHITE)
     if capture_active:
         draw.text((10, 30), f"Capturing {capture_bit}", font=small_font, fill=LIGHT_BLUE)
-        draw.ellipse((90, 25, 100, 35), fill=GREEN)
+        draw.ellipse((90, 25, 100, 35), fill=GREEN)  # Active indicator
         try:
             while not capture_output.empty():
                 line = capture_output.get_nowait()
@@ -476,10 +445,6 @@ def draw_capture_page(draw):
         for i, output in enumerate(recent_outputs):
             draw.rounded_rectangle((5, 50 + i * 15, 122, 65 + i * 15), radius=3, fill=GRAY)
             draw.text((10, 52 + i * 15), output[:20], font=tiny_font, fill=WHITE)
-        if last_saved_key:
-            kar_name, key, saved = last_saved_key
-            status = "Saved" if saved else "Duplicate"
-            draw.text((10, 95), f"{status}: {kar_name} ({key[:10]}...)", font=tiny_font, fill=GREEN if saved else RED)
         if selected_index == 0:
             draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
             draw.text((10, 102), "Stop", font=small_font, fill=BLACK)
@@ -516,7 +481,6 @@ def draw_key_action_page(draw, kar_name, key_val):
     for i, item in enumerate(key_action_menu):
         y = 70 + i * 18
         if i == selected_index:
-            draw.rounded_rectangle((5, y, 122, y + 16), radius=5, fill=LIGHT_BLUE)
             draw.text((15, y + 2), item, font=small_font, fill=BLACK)
             draw.polygon((8, y + 6, 12, y + 10, 8, y + 14), fill=BLACK)
         else:
@@ -533,7 +497,7 @@ while running:
             GPIO.setup(24, GPIO.OUT)
             GPIO.setup(25, GPIO.OUT)
             GPIO.setup(8, GPIO.OUT)
-            print("🔧 Re-initialized GPIO mode and pins")
+            print("🔍🔍 Re-initialized GPIO mode and pins")
         
         vrx = read_adc(0)
         vry = read_adc(1)
@@ -544,9 +508,9 @@ while running:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             GPIO.setup(24, GPIO.OUT)
-            GPIO.setup(25, GPIO.OUT)
+            draw.text((10, 20), "Error", font=small_font, fill=WHITE)
             GPIO.setup(8, GPIO.OUT)
-            print("🔧 Re-initialized GPIO pins")
+            print("🔍🔍 Re-initialized GPIO pins")
             button_state = True
         except Exception as e:
             print(f"⚠️ Error re-initializing GPIO: {e}")
@@ -569,7 +533,7 @@ while running:
                 selected_index = min(len(capture_menu) - 1, selected_index + 1)
             elif current_menu == "jamming" or current_menu == "wifi":
                 selected_index = min(1, selected_index + 1)
-            elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"]:
+            elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
                 saved_keys = get_saved_keys()
                 selected_index = min(len(saved_keys) + 1, selected_index + 1)
             elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
@@ -598,23 +562,25 @@ while running:
                 selected_index = 0
             elif selected_index == 4:  # Poweroff
                 print("🔌 Initiating system poweroff")
+                # Display shutdown message
                 try:
                     with canvas(device) as draw:
                         draw.rectangle((0, 0, 127, 127), fill=BLACK)
                         draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
                         draw.text((5, 3), "Poweroff", font=font, fill=WHITE)
                         draw.text((10, 50), "Shutting down...", font=small_font, fill=RED)
-                    time.sleep(2)
+                    time.sleep(2)  # Show message for 2 seconds
                 except Exception as e:
                     print(f"⚠️ Error displaying shutdown message: {e}")
+                # Stop processes and cleanup
                 stop_all_processes()
                 try:
-                    device.backlight(False)
-                    device.hide()
+                    device.backlight(False)  # Turn off backlight
+                    device.hide()  # Turn off display
                 except Exception as e:
                     print(f"⚠️ Error during display cleanup: {e}")
                 try:
-                    GPIO.cleanup([16, 24, 25, 8])
+                    GPIO.cleanup([16, 24, 25, 8])  # Clean GPIO pins
                 except Exception as e:
                     print(f"⚠️ Error during GPIO cleanup: {e}")
                 try:
@@ -660,7 +626,6 @@ while running:
                 previous_menu = "security"
                 selected_index = 0
                 recent_outputs = []
-                last_saved_key = None
             elif selected_index == 3:
                 print("🔄 Entering Reuse My RF kye (security)")
                 current_menu = "security_sub"
@@ -683,7 +648,6 @@ while running:
                 previous_menu = "attack"
                 selected_index = 0
                 recent_outputs = []
-                last_saved_key = None
             elif selected_index == 3:
                 print("🔄 Entering Reuse My RF kye (attack)")
                 current_menu = "attack_sub"
@@ -744,7 +708,6 @@ while running:
                     capture_active = False
                     capture_bit = None
                     recent_outputs = []
-                    last_saved_key = None
                 stop_all_processes()
                 current_menu = previous_menu
                 selected_index = 1
@@ -761,7 +724,6 @@ while running:
                         capture_active = False
                         capture_bit = None
                         recent_outputs = []
-                        last_saved_key = None
                     stop_all_processes()
             else:
                 if selected_index in [0, 1, 2, 3]:  # Start capture
@@ -785,15 +747,16 @@ while running:
                         capture_active = False
                         capture_bit = None
                         stop_all_processes()
-        elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"]:
+        elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
             saved_keys = get_saved_keys()
-            if selected_index == len(saved_keys):  # Select
-                selecting_key = True
-                selected_index = 0
-            elif selected_index == len(saved_keys) + 1:  # Exit
+            if selected_index < len(saved_keys):
+                key = saved_keys[selected_index][1]
+                key_name = save_key(key)
+                print(f"✅ Key selected: {key_name}: {key}")
+            elif selected_index == len(saved_keys) + 1:
+                selecting_key = False
                 current_menu = previous_menu
                 selected_index = 1
-                selecting_key = False
         elif current_menu in ["security_sub", "attack_sub"] and current_page == "Reuse My RF kye":
             saved_keys = get_saved_keys()
             if selected_index < len(saved_keys):
@@ -817,9 +780,9 @@ while running:
                 current_page = "Reuse My RF kye"
                 selected_index = 0
             elif selected_index == 2:  # Exit
-                current_menu = "security_sub" if previous_menu == "security" else "attack_sub"
-                current_page = "Reuse My RF kye"
-                selected_index = 0
+                current_menu = previous_menu
+                current_page = None
+                selected_index = 3
         elif current_menu == "wifi":
             if selected_index == 1:
                 current_menu = "main"
@@ -856,7 +819,7 @@ while running:
                 draw_sub_page(draw, current_page)
             elif current_menu == "wifi":
                 draw_wifi_test_page(draw)
-            elif current_menu == "key_action" and selected_key:
+            elif current_menu == "key_action":
                 draw_key_action_page(draw, selected_key[0], selected_key[1])
     except Exception as e:
         print(f"⚠️ Error drawing: {e}")
