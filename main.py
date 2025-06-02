@@ -262,7 +262,7 @@ def draw_menu(draw, items, selected):
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=LIGHT_BLUE)
             draw.text((15, y + 3), item, font=small_font, fill=BLACK)
             # Draw selection icon
-           (draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
+            draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
         else:
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=GRAY)
             draw.text((15, y + 3), item, font=small_font, fill=WHITE)
