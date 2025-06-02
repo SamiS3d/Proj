@@ -195,16 +195,22 @@ def read_adc(channel):
 # الألوان
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-BLUE = (0, 0, 255)
-GRAY = (100, 100, 100)
+BLUE = (0, 120, 255)
+GRAY = (50, 50, 50)
+DARK_GRAY = (30, 30, 30)
+LIGHT_BLUE = (100, 180, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 
 # الخطوط
 try:
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)
     small_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
+    tiny_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
 except IOError:
     font = ImageFont.load_default()
     small_font = ImageFont.load_default()
+    tiny_font = ImageFont.load_default()
 
 # هيكلية القوائم
 main_menu = ["Info", "Security part", "Attack part", "Wifi Test"]
@@ -246,16 +252,25 @@ def read_process_output(process, output_queue):
 # رسم القوائم
 def draw_menu(draw, items, selected):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
+    # Draw header
+    draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+    draw.text((5, 3), "Menu", font=font, fill=WHITE)
+    # Draw items
     for i, item in enumerate(items):
-        y = 20 + i * 25
+        y = 25 + i * 22
         if i == selected:
-            draw.rectangle((10, y - 2, 117, y + 16), fill=GRAY)
-            draw.text((15, y), item, font=font, fill=BLUE)
+            draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=LIGHT_BLUE)
+            draw.text((15, y + 3), item, font=small_font, fill=BLACK)
+            # Draw selection icon
+            draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
         else:
-            draw.text((15, y), item, font=font, fill=WHITE)
+            draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=GRAY)
+            draw.text((15, y + 3), item, font=small_font, fill=WHITE)
 
 def draw_info_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
+    draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+    draw.text((5, 3), "Project Info", font=font, fill=WHITE)
     lines = [
         "Graduation Project",
         "Cybersecurity",
@@ -265,14 +280,19 @@ def draw_info_page(draw):
         "Exit"
     ]
     for i, line in enumerate(lines):
-        y = 10 + i * 18
-        color = BLUE if i == len(lines) - 1 and selected_index == 0 else WHITE
-        draw.text((10, y), line, font=small_font, fill=color)
+        y = 25 + i * 18
+        if i == len(lines) - 1 and selected_index == 0:
+            draw.rounded_rectangle((5, y, 122, y + 16), radius=5, fill=LIGHT_BLUE)
+            draw.text((15, y + 2), line, font=small_font, fill=BLACK)
+            draw.polygon((8, y + 6, 12, y + 10, 8, y + 14), fill=BLACK)
+        else:
+            draw.text((10, y + 2), line, font=small_font, fill=WHITE)
 
 def draw_sub_page(draw, title):
     global recent_outputs, selecting_key
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
-    draw.text((15, 20), title, font=font, fill=WHITE)
+    draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+    draw.text((5, 3), title, font=font, fill=WHITE)
     
     if title == "Jamming Detection" and jamming_detect_active:
         try:
@@ -282,60 +302,130 @@ def draw_sub_page(draw, title):
                 if len(recent_outputs) > 3:
                     recent_outputs.pop(0)
             for i, output in enumerate(recent_outputs):
-                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
-            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+                draw.rounded_rectangle((5, 30 + i * 15, 122, 45 + i * 15), radius=3, fill=GRAY)
+                draw.text((10, 32 + i * 15), output[:20], font=tiny_font, fill=WHITE)
+            if selected_index == 0:
+                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
+                draw.text((10, 102), "Stop", font=small_font, fill=BLACK)
+            else:
+                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
+                draw.text((10, 102), "Stop", font=small_font, fill=WHITE)
         except queue.Empty:
             for i, output in enumerate(recent_outputs):
-                draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
-            draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+                draw.rounded_rectangle((5, 30 + i * 15, 122, 45 + i * 15), radius=3, fill=GRAY)
+                draw.text((10, 32 + i * 15), output[:20], font=tiny_font, fill=WHITE)
+            if selected_index == 0:
+                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
+                draw.text((10, 102), "Stop", font=small_font, fill=BLACK)
+            else:
+                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
+                draw.text((10, 102), "Stop", font=small_font, fill=WHITE)
     elif title in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
         saved_keys = get_saved_keys()
         for i, (kar_name, key) in enumerate(saved_keys):
-            y = 40 + i * 15
+            y = 30 + i * 15
             if i == selected_index:
-                draw.rectangle((10, y - 2, 117, y + 12), fill=GRAY)
-                draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=BLUE)
+                draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=LIGHT_BLUE)
+                draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=BLACK)
+                draw.polygon((8, y + 5, 12, y + 9, 8, y + 13), fill=BLACK)
             else:
-                draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=WHITE)
-        draw.text((15, 100), "Select", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
-        draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
+                draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=GRAY)
+                draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=WHITE)
+        select_y = 90 + len(saved_keys) * 15
+        if selected_index == len(saved_keys):
+            draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=LIGHT_BLUE)
+            draw.text((10, select_y + 2), "Select", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=GRAY)
+            draw.text((10, select_y + 2), "Select", font=small_font, fill=WHITE)
+        if selected_index == len(saved_keys) + 1:
+            draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=RED)
+            draw.text((70, select_y + 2), "Exit", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=GRAY)
+            draw.text((70, select_y + 2), "Exit", font=small_font, fill=WHITE)
     elif title == "Reuse My RF kye":
-        print("📄 Drawing Reuse My RF kye page")
         saved_keys = get_saved_keys()
-        print(f"🔑 Saved keys: {saved_keys}")
         if not saved_keys:
-            print("⚠️ No keys saved")
-            draw.text((15, 40), "No keys saved", font=small_font, fill=WHITE)
-            draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+            draw.text((10, 40), "No keys saved", font=small_font, fill=WHITE)
+            if selected_index == 0:
+                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
+                draw.text((10, 102), "Exit", font=small_font, fill=BLACK)
+            else:
+                draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
+                draw.text((10, 102), "Exit", font=small_font, fill=WHITE)
         else:
             for i, (kar_name, key) in enumerate(saved_keys):
-                print(f"🔑 Drawing key {kar_name}: {key}")
-                y = 40 + i * 15
+                y = 30 + i * 15
                 if i == selected_index:
-                    draw.rectangle((10, y - 2, 117, y + 12), fill=GRAY)
-                    draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=BLUE)
+                    draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=LIGHT_BLUE)
+                    draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=BLACK)
+                    draw.polygon((8, y + 5, 12, y + 9, 8, y + 13), fill=BLACK)
                 else:
-                    draw.text((15, y), f"{kar_name}: {key}", font=small_font, fill=WHITE)
-            draw.text((15, 100), "Select", font=small_font, fill=BLUE if selected_index == len(saved_keys) else WHITE)
-            draw.text((15, 115), "Exit", font=small_font, fill=BLUE if selected_index == len(saved_keys) + 1 else WHITE)
+                    draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=GRAY)
+                    draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=WHITE)
+            select_y = 90 + len(saved_keys) * 15
+            if selected_index == len(saved_keys):
+                draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=LIGHT_BLUE)
+                draw.text((10, select_y + 2), "Select", font=small_font, fill=BLACK)
+            else:
+                draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=GRAY)
+                draw.text((10, select_y + 2), "Select", font=small_font, fill=WHITE)
+            if selected_index == len(saved_keys) + 1:
+                draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=RED)
+                draw.text((70, select_y + 2), "Exit", font=small_font, fill=BLACK)
+            else:
+                draw.rounded_rectangle((65, select_y, 122, select_y + 14), radius=5, fill=GRAY)
+                draw.text((70, select_y + 2), "Exit", font=small_font, fill=WHITE)
     else:
-        draw.text((15, 80), "Start" if title == "Jamming Detection" else "test", font=small_font, fill=WHITE)
-        draw.text((15, 100), "Exit", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+        if selected_index == 0:
+            draw.rounded_rectangle((5, 80, 60, 96), radius=5, fill=GREEN)
+            draw.text((10, 82), "Start" if title == "Jamming Detection" else "Test", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((5, 80, 60, 96), radius=5, fill=GRAY)
+            draw.text((10, 82), "Start" if title == "Jamming Detection" else "Test", font=small_font, fill=WHITE)
+        if selected_index == 0:
+            draw.rounded_rectangle((65, 80, 122, 96), radius=5, fill=RED)
+            draw.text((70, 82), "Exit", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((65, 80, 122, 96), radius=5, fill=GRAY)
+            draw.text((70, 82), "Exit", font=small_font, fill=WHITE)
 
 def draw_jamming_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
+    draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+    draw.text((5, 3), "Jamming", font=font, fill=WHITE)
     if jamming_active:
-        draw.text((15, 30), "Jamming Active", font=font, fill=BLUE)
-        draw.text((15, 80), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+        draw.text((10, 40), "Jamming Active", font=font, fill=LIGHT_BLUE)
+        draw.ellipse((90, 35, 100, 45), fill=GREEN)  # Active indicator
+        if selected_index == 0:
+            draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
+            draw.text((10, 102), "Stop", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
+            draw.text((10, 102), "Stop", font=small_font, fill=WHITE)
     else:
-        draw.text((15, 50), "Start", font=font, fill=BLUE if selected_index == 0 else WHITE)
-        draw.text((15, 80), "Exit", font=small_font, fill=BLUE if selected_index == 1 else WHITE)
+        if selected_index == 0:
+            draw.rounded_rectangle((5, 50, 60, 66), radius=5, fill=GREEN)
+            draw.text((10, 52), "Start", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((5, 50, 60, 66), radius=5, fill=GRAY)
+            draw.text((10, 52), "Start", font=small_font, fill=WHITE)
+        if selected_index == 1:
+            draw.rounded_rectangle((65, 50, 122, 66), radius=5, fill=RED)
+            draw.text((70, 52), "Exit", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((65, 50, 122, 66), radius=5, fill=GRAY)
+            draw.text((70, 52), "Exit", font=small_font, fill=WHITE)
 
 def draw_capture_page(draw):
     global recent_outputs
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
+    draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+    draw.text((5, 3), "Capture RF", font=font, fill=WHITE)
     if capture_active:
-        draw.text((15, 20), f"Capturing {capture_bit}", font=font, fill=BLUE)
+        draw.text((10, 30), f"Capturing {capture_bit}", font=small_font, fill=LIGHT_BLUE)
+        draw.ellipse((90, 25, 100, 35), fill=GREEN)  # Active indicator
         try:
             while not capture_output.empty():
                 line = capture_output.get_nowait()
@@ -345,27 +435,50 @@ def draw_capture_page(draw):
         except queue.Empty:
             pass
         for i, output in enumerate(recent_outputs):
-            draw.text((15, 50 + i * 15), output[:20], font=small_font, fill=WHITE)
-        draw.text((15, 100), "Stop", font=small_font, fill=BLUE if selected_index == 0 else WHITE)
+            draw.rounded_rectangle((5, 50 + i * 15, 122, 65 + i * 15), radius=3, fill=GRAY)
+            draw.text((10, 52 + i * 15), output[:20], font=tiny_font, fill=WHITE)
+        if selected_index == 0:
+            draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
+            draw.text((10, 102), "Stop", font=small_font, fill=BLACK)
+        else:
+            draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
+            draw.text((10, 102), "Stop", font=small_font, fill=WHITE)
     else:
         draw_menu(draw, capture_menu, selected_index)
 
 def draw_wifi_test_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
-    draw.text((15, 50), "Test Wifi", font=font, fill=BLUE if selected_index == 0 else WHITE)
-    draw.text((15, 80), "Exit", font=small_font, fill=BLUE if selected_index == 1 else WHITE)
+    draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+    draw.text((5, 3), "Wifi Test", font=font, fill=WHITE)
+    if selected_index == 0:
+        draw.rounded_rectangle((5, 50, 60, 66), radius=5, fill=GREEN)
+        draw.text((10, 52), "Test Wifi", font=small_font, fill=BLACK)
+    else:
+        draw.rounded_rectangle((5, 50, 60, 66), radius=5, fill=GRAY)
+        draw.text((10, 52), "Test Wifi", font=small_font, fill=WHITE)
+    if selected_index == 1:
+        draw.rounded_rectangle((65, 50, 122, 66), radius=5, fill=RED)
+        draw.text((70, 52), "Exit", font=small_font, fill=BLACK)
+    else:
+        draw.rounded_rectangle((65, 50, 122, 66), radius=5, fill=GRAY)
+        draw.text((70, 52), "Exit", font=small_font, fill=WHITE)
 
 def draw_key_action_page(draw, kar_name, key_val):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
-    draw.text((15, 20), f"Key: {kar_name}", font=font, fill=WHITE)
-    draw.text((15, 35), f"Value: {key_val}", font=small_font, fill=WHITE)
+    draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+    draw.text((5, 3), "Key Actions", font=font, fill=WHITE)
+    draw.rounded_rectangle((5, 30, 122, 60), radius=5, fill=GRAY)
+    draw.text((10, 32), f"Key: {kar_name}", font=small_font, fill=WHITE)
+    draw.text((10, 47), f"Val: {key_val[:10]}...", font=tiny_font, fill=WHITE)
     for i, item in enumerate(key_action_menu):
-        y = 60 + i * 20
+        y = 70 + i * 18
         if i == selected_index:
-            draw.rectangle((10, y - 2, 117, y + 12), fill=GRAY)
-            draw.text((15, y), item, font=small_font, fill=BLUE)
+            draw.rounded_rectangle((5, y, 122, y + 16), radius=5, fill=LIGHT_BLUE)
+            draw.text((15, y + 2), item, font=small_font, fill=BLACK)
+            draw.polygon((8, y + 6, 12, y + 10, 8, y + 14), fill=BLACK)
         else:
-            draw.text((15, y), item, font=small_font, fill=WHITE)
+            draw.rounded_rectangle((5, y, 122, y + 16), radius=5, fill=GRAY)
+            draw.text((15, y + 2), item, font=small_font, fill=WHITE)
 
 # الحلقة الرئيسية
 running = True
@@ -477,7 +590,7 @@ while running:
                 current_menu = "capture"
                 previous_menu = "security"
                 selected_index = 0
-                recent_outputs = []  # تنظيف مخرجات الـ capture السابقة
+                recent_outputs = []
             elif selected_index == 3:
                 print("🔄 Entering Reuse My RF kye (security)")
                 current_menu = "security_sub"
@@ -499,7 +612,7 @@ while running:
                 current_menu = "capture"
                 previous_menu = "attack"
                 selected_index = 0
-                recent_outputs = []  # تنظيف مخرجات الـ capture السابقة
+                recent_outputs = []
             elif selected_index == 3:
                 print("🔄 Entering Reuse My RF kye (attack)")
                 current_menu = "attack_sub"
@@ -560,7 +673,7 @@ while running:
                     capture_active = False
                     capture_bit = None
                     recent_outputs = []
-                stop_all_processes()  # تنظيف كامل قبل الخروج
+                stop_all_processes()
                 current_menu = previous_menu
                 selected_index = 1
             elif capture_active:
@@ -576,14 +689,14 @@ while running:
                         capture_active = False
                         capture_bit = None
                         recent_outputs = []
-                    stop_all_processes()  # تنظيف كامل بعد التوقف
+                    stop_all_processes()
             else:
                 if selected_index in [0, 1, 2, 3]:  # Start capture
                     bit_options = ["24", "32", "64", "128"]
                     capture_bit = bit_options[selected_index]
-                    stop_all_processes()  # تنظيف كامل قبل البدء
+                    stop_all_processes()
                     try:
-                        capture_output = queue.Queue()  # إعادة إنشاء الـ queue
+                        capture_output = queue.Queue()
                         capture_process = subprocess.Popen(
                             ["python3", os.path.join(BASE_DIR, f"recever{capture_bit}.py")],
                             stdout=subprocess.PIPE,
@@ -598,7 +711,7 @@ while running:
                         capture_process = None
                         capture_active = False
                         capture_bit = None
-                        stop_all_processes()  # تنظيف لو صار خطأ
+                        stop_all_processes()
         elif current_menu in ["security_sub", "attack_sub"] and current_page in ["Captcher My RF kye", "Captcher RF kye"] and selecting_key:
             saved_keys = get_saved_keys()
             if selected_index < len(saved_keys):
