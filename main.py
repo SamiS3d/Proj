@@ -18,10 +18,18 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # وظيفة لحفظ الرموز في ملف
 def save_key(key):
+    # Check if key already exists
+    existing_keys = get_saved_keys()
+    for kar_name, existing_key in existing_keys:
+        if existing_key == key:
+            print(f"⚠️ Key {key} already exists as {kar_name}, skipping save.")
+            return kar_name
+    # Save new key if not a duplicate
     count = get_saved_keys_count() + 1
     kar_name = f"kar{count}"
     with open(os.path.join(BASE_DIR, "keys.txt"), "a") as f:
         f.write(f"{kar_name}:{key}\n")
+    print(f"✅ Saved new key as {kar_name}: {key}")
     return kar_name
 
 # وظيفة لقراءة عدد الرموز المحفوظة
@@ -347,7 +355,7 @@ def draw_sub_page(draw, title):
     elif title == "Reuse My RF kye":
         saved_keys = get_saved_keys()
         if not saved_keys:
-            draw.text((10, 40), "No keys saved", font=small_font, fill=WHITE)
+            draw.text((10, 40), "No keys saved", font=small_font fill=WHITE)
             if selected_index == 0:
                 draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
                 draw.text((10, 102), "Exit", font=small_font, fill=BLACK)
@@ -555,9 +563,27 @@ while running:
                 selected_index = 0
             elif selected_index == 4:  # Poweroff
                 print("🔌 Initiating system poweroff")
+                # Display shutdown message
+                try:
+                    with canvas(device) as draw:
+                        draw.rectangle((0, 0, 127, 127), fill=BLACK)
+                        draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
+                        draw.text((5, 3), "Poweroff", font=font, fill=WHITE)
+                        draw.text((10, 50), "Shutting down...", font=small_font, fill=RED)
+                    time.sleep(2)  # Show message for 2 seconds
+                except Exception as e:
+                    print(f"⚠️ Error displaying shutdown message: {e}")
+                # Stop processes and cleanup
                 stop_all_processes()
-                GPIO.cleanup([16, 24, 25, 8])
-                device.cleanup()
+                try:
+                    device.backlight(False)  # Turn off backlight
+                    device.hide()  # Turn off display
+                except Exception as e:
+                    print(f"⚠️ Error during display cleanup: {e}")
+                try:
+                    GPIO.cleanup([16, 24, 25, 8])  # Clean GPIO pins
+                except Exception as e:
+                    print(f"⚠️ Error during GPIO cleanup: {e}")
                 try:
                     subprocess.run(["sudo", "poweroff"], check=True)
                 except Exception as e:
@@ -727,7 +753,7 @@ while running:
             if selected_index < len(saved_keys):
                 key = saved_keys[selected_index][1]
                 key_name = save_key(key)
-                print(f"✅ Key saved as {key_name}: {key}")
+                print(f"✅ Key selected: {key_name}: {key}")
             elif selected_index == len(saved_keys) + 1:
                 selecting_key = False
                 current_menu = previous_menu
@@ -804,5 +830,13 @@ while running:
 
 # التنظيف
 stop_all_processes()
-GPIO.cleanup([16, 24, 25, 8])
+try:
+    device.backlight(False)
+    device.hide()
+except Exception as e:
+    print(f"⚠️ Error during final display cleanup: {e}")
+try:
+    GPIO.cleanup([16, 24, 25, 8])
+except Exception as e:
+    print(f"⚠️ Error during final GPIO cleanup: {e}")
 device.cleanup()
