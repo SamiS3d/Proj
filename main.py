@@ -355,7 +355,7 @@ def draw_sub_page(draw, title):
     elif title == "Reuse My RF kye":
         saved_keys = get_saved_keys()
         if not saved_keys:
-            draw.text((10, 40), "No keys saved", font=small_font fill=WHITE)
+            draw.text((10, 40), "No keys saved", font=small_font, fill=WHITE)
             if selected_index == 0:
                 draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=RED)
                 draw.text((10, 102), "Exit", font=small_font, fill=BLACK)
@@ -481,7 +481,6 @@ def draw_key_action_page(draw, kar_name, key_val):
     for i, item in enumerate(key_action_menu):
         y = 70 + i * 18
         if i == selected_index:
-            draw.rounded_rectangle((5, y, 122, y + 16), radius=5, fill=LIGHT_BLUE)
             draw.text((15, y + 2), item, font=small_font, fill=BLACK)
             draw.polygon((8, y + 6, 12, y + 10, 8, y + 14), fill=BLACK)
         else:
@@ -498,7 +497,7 @@ while running:
             GPIO.setup(24, GPIO.OUT)
             GPIO.setup(25, GPIO.OUT)
             GPIO.setup(8, GPIO.OUT)
-            print("🔧 Re-initialized GPIO mode and pins")
+            print("🔍🔍 Re-initialized GPIO mode and pins")
         
         vrx = read_adc(0)
         vry = read_adc(1)
@@ -509,9 +508,9 @@ while running:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             GPIO.setup(24, GPIO.OUT)
-            GPIO.setup(25, GPIO.OUT)
+            draw.text((10, 20), "Error", font=small_font, fill=WHITE)
             GPIO.setup(8, GPIO.OUT)
-            print("🔧 Re-initialized GPIO pins")
+            print("🔍🔍 Re-initialized GPIO pins")
             button_state = True
         except Exception as e:
             print(f"⚠️ Error re-initializing GPIO: {e}")
