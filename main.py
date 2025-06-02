@@ -213,7 +213,7 @@ except IOError:
     tiny_font = ImageFont.load_default()
 
 # هيكلية القوائم
-main_menu = ["Info", "Security part", "Attack part", "Wifi Test"]
+main_menu = ["Info", "Security part", "Attack part", "Wifi Test", "Poweroff"]
 security_menu = ["Jamming Detection", "Captcher My RF kye", "Captcher My RF kye Rolling", "Reuse My RF kye", "Exit"]
 attack_menu = ["Jamming", "Captcher RF kye", "Captcher RF kye Rolling", "Reuse My RF kye", "Exit"]
 capture_menu = ["24BIT", "32BIT", "64BIT", "128BIT", "Exit"]
@@ -262,7 +262,7 @@ def draw_menu(draw, items, selected):
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=LIGHT_BLUE)
             draw.text((15, y + 3), item, font=small_font, fill=BLACK)
             # Draw selection icon
-            draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
+           (draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
         else:
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=GRAY)
             draw.text((15, y + 3), item, font=small_font, fill=WHITE)
@@ -553,6 +553,16 @@ while running:
             elif selected_index == 3:
                 current_menu = "wifi"
                 selected_index = 0
+            elif selected_index == 4:  # Poweroff
+                print("🔌 Initiating system poweroff")
+                stop_all_processes()
+                GPIO.cleanup([16, 24, 25, 8])
+                device.cleanup()
+                try:
+                    subprocess.run(["sudo", "poweroff"], check=True)
+                except Exception as e:
+                    print(f"⚠️ Error executing poweroff: {e}")
+                running = False
         elif current_menu == "security":
             if selected_index == len(security_menu) - 1:
                 current_menu = "main"
