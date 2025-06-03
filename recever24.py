@@ -3,10 +3,8 @@ import time
 import sys
 import os
 
-# تحديد المسار الأساسي
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# وظيفة لحفظ الرموز في ملف (من الكود الأول)
 def save_key(key):
     count = get_saved_keys_count() + 1
     kar_name = f"kar{count}"
@@ -14,7 +12,6 @@ def save_key(key):
         f.write(f"{kar_name}:{key}\n")
     return kar_name
 
-# وظيفة لقراءة عدد الرموز المحفوظة (من الكود الأول)
 def get_saved_keys_count():
     try:
         with open(os.path.join(BASE_DIR, "keys.txt"), "r") as f:
@@ -34,11 +31,11 @@ timings = []
 last_tick = None
 last_bits = ""
 last_bits_time = 0
-MIN_PULSES = 10
-MAX_STD_DEV = 1200
+MIN_PULSES = 30
+MAX_STD_DEV = 800
 MIN_BITS_LEN = 23
 MAX_BITS_LEN = 25
-REPEAT_SUPPRESSION_MS = 100
+REPEAT_SUPPRESSION_MS = 300
 
 def decode_bits(bits):
     try:
