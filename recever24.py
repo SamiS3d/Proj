@@ -31,11 +31,11 @@ timings = []
 last_tick = None
 last_bits = ""
 last_bits_time = 0
-MIN_PULSES = 30
-MAX_STD_DEV = 800
-MIN_BITS_LEN = 23
-MAX_BITS_LEN = 25
-REPEAT_SUPPRESSION_MS = 300
+MIN_PULSES = 20
+MAX_STD_DEV = 1100
+MIN_BITS_LEN = 24
+MAX_BITS_LEN = 24
+REPEAT_SUPPRESSION_MS = 100
 
 def decode_bits(bits):
     try:
