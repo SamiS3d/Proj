@@ -110,10 +110,10 @@ def process_timings(timings):
             if dec_val is not None:
                 now = time.strftime("%H:%M:%S", time.localtime())
                 output = f"{dec_val}"
-                print(f"📡 Received code: {output}")
+                print(f"{output}")
                 # حفظ الرمز في ملف keys.txt
                 key_name = save_key(output)
-                print(f"✅ Key saved as {key_name}: {output}")
+                print(f"Key saved {key_name}: {output}")
                 sys.stdout.flush()
                 last_bits = bits
                 last_bits_time = now_time
