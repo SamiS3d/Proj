@@ -123,7 +123,7 @@ Embedding in README
 ![Model](Photo/Model.jpg)
 
 ### Wiring Diagram
-![Wiring](Wire.png)
+![Wiring](Wire.jpg)
 
 ### CAD Diagram
 ![CAD](Photo/Cad.jpg)
