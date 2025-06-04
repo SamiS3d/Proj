@@ -120,19 +120,19 @@ test_results.jpg: Optional waveform or jamming logs.
 
 Embedding in README
 ### Hardware Setup
-![Model](Photo/cd13b0a4-b743-4545-9243-38136d3849aa.jpg)
+![Model](Photo/Model.jpg)
 
 ### Wiring Diagram
-![Wiring](Photo/Screenshot 2025-06-04 155408.png)
+![Wiring](Wire.png)
 
 ### CAD Diagram
-![CAD](Photo/7e04ce7a-3dc5-401e-8168-13f163d21d31.jpg)
+![CAD](Photo/Cad.jpg)
 
 ### Blender
-![Blender](Photo/45d3c52d-eb1f-4bd2-a664-da0887f14fda.jpg)
+![Blender](Photo/Blender.jpg)
 
 ### User Interface
-![GUI](Photo/25c8c2bf-0f1a-4455-a828-d5119d0c5b5b.jpg)
+![GUI](Photo/Real.jpg)
 
 ▶️ Usage
 # Run the GUI interface on boot
