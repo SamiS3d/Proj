@@ -1,4 +1,5 @@
-![7e04ce7a-3dc5-401e-8168-13f163d21d31](https://github.com/user-attachments/assets/20fb02dd-252a-45c0-bdfa-fc3bd92f723c)🛡️ IoT-GEN: Multi-Purpose IoT Security Guard Edge Node
+(Photo/Real.jpg)
+🛡️ IoT-GEN: Multi-Purpose IoT Security Guard Edge Node
 IoT-GEN is a robust IoT security edge node designed to simulate, detect, and defend against real-world RF and Wi-Fi attacks. Operating exclusively on the 433 MHz frequency, it integrates attack emulation, signal analysis, and real-time defense mechanisms using Temporal-Statistical RF Frame Filtering. Built on a Raspberry Pi Zero 2W with wireless modules, it offers a compact and powerful solution for IoT security testing.
 🔧 Hardware Components
 
