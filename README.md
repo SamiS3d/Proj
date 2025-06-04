@@ -120,19 +120,19 @@ test_results.jpg: Optional waveform or jamming logs.
 
 Embedding in README
 ### Hardware Setup
-![Model](![cd13b0a4-b743-4545-9243-38136d3849aa](https://github.com/user-attachments/assets/d17bcdd1-1ee5-47e1-bc1e-5807a23d2d8d))
+![Model](Photo/cd13b0a4-b743-4545-9243-38136d3849aa.jpg)
 
 ### Wiring Diagram
-![Wiring](![image](https://github.com/user-attachments/assets/150c2f1b-7467-48d9-ab66-05040d07d646))
+![Wiring](Photo/Screenshot 2025-06-04 155408.png)
 
 ### CAD Diagram
-![CAD](![7e04ce7a-3dc5-401e-8168-13f163d21d31](https://github.com/user-attachments/assets/6de971e2-46f5-4674-96fa-a391c5b263d8))
+![CAD](Photo/7e04ce7a-3dc5-401e-8168-13f163d21d31.jpg)
 
 ### Blender
-![Blender](![45d3c52d-eb1f-4bd2-a664-da0887f14fda](https://github.com/user-attachments/assets/440cc7ae-edfe-473e-a874-fe3eeb3d15a5))
+![Blender](Photo/45d3c52d-eb1f-4bd2-a664-da0887f14fda.jpg)
 
 ### User Interface
-![GUI](![25c8c2bf-0f1a-4455-a828-d5119d0c5b5b](https://github.com/user-attachments/assets/7283ffda-f257-4385-b9be-e798822ba23c))
+![GUI](Photo/25c8c2bf-0f1a-4455-a828-d5119d0c5b5b.jpg)
 
 ▶️ Usage
 # Run the GUI interface on boot
