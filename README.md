@@ -120,24 +120,19 @@ test_results.jpg: Optional waveform or jamming logs.
 
 Embedding in README
 ### Hardware Setup
-![Model](![cd13b0a4-b743-4545-9243-38136d3849aa](https://github.com/user-attachments/assets/d17bcdd1-1ee5-47e1-bc1e-5807a23d2d8d)
-)
+![Model](![cd13b0a4-b743-4545-9243-38136d3849aa](https://github.com/user-attachments/assets/d17bcdd1-1ee5-47e1-bc1e-5807a23d2d8d))
 
 ### Wiring Diagram
-![Wiring](![image](https://github.com/user-attachments/assets/f006ebc5-d067-4c33-8036-69a756d65a42)
-)
+![Wiring](![image](https://github.com/user-attachments/assets/150c2f1b-7467-48d9-ab66-05040d07d646))
 
 ### CAD Diagram
-![CAD](![7e04ce7a-3dc5-401e-8168-13f163d21d31](https://github.com/user-attachments/assets/6de971e2-46f5-4674-96fa-a391c5b263d8)
-)
+![CAD](![7e04ce7a-3dc5-401e-8168-13f163d21d31](https://github.com/user-attachments/assets/6de971e2-46f5-4674-96fa-a391c5b263d8))
 
 ### Blender
-![Blender](![45d3c52d-eb1f-4bd2-a664-da0887f14fda](https://github.com/user-attachments/assets/440cc7ae-edfe-473e-a874-fe3eeb3d15a5)
-)
+![Blender](![45d3c52d-eb1f-4bd2-a664-da0887f14fda](https://github.com/user-attachments/assets/440cc7ae-edfe-473e-a874-fe3eeb3d15a5))
 
 ### User Interface
-![GUI](![25c8c2bf-0f1a-4455-a828-d5119d0c5b5b](https://github.com/user-attachments/assets/7283ffda-f257-4385-b9be-e798822ba23c)
-)
+![GUI](![25c8c2bf-0f1a-4455-a828-d5119d0c5b5b](https://github.com/user-attachments/assets/7283ffda-f257-4385-b9be-e798822ba23c))
 
 ▶️ Usage
 # Run the GUI interface on boot
