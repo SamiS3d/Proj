@@ -18,13 +18,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # وظيفة لحفظ الرموز في ملف
 def save_key(key):
-    # Check if key already exists
-    existing_keys = get_saved_keys()
-    for kar_name, existing_key in existing_keys:
-        if existing_key == key:
-            print(f"⚠️ Key {key} already exists as {kar_name}, skipping save.")
-            return kar_name
-    # Save new key if not a duplicate
+    # Save new key directly without checking for duplicates
     count = get_saved_keys_count() + 1
     kar_name = f"kar{count}"
     with open(os.path.join(BASE_DIR, "keys.txt"), "a") as f:
