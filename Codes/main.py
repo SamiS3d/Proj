@@ -263,18 +263,26 @@ def draw_menu(draw, items, selected):
     # Draw header
     draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
     draw.text((5, 3), "Menu", font=font, fill=WHITE)
-    # Draw items
-    for i, item in enumerate(items):
-        y = 25 + i * 22
+    
+    # عدد العناصر المعروضة في الشاشة (Viewport)
+    max_display_items = 4
+    # حساب أول عنصر يتم عرضه بناءً على المؤشر
+    if len(items) <= max_display_items:
+        start_index = 0
+    else:
+        start_index = max(0, min(selected - 1, len(items) - max_display_items))
+    
+    # عرض العناصر ضمن نافذة العرض
+    for i in range(start_index, min(start_index + max_display_items, len(items))):
+        y = 25 + (i - start_index) * 22
         if i == selected:
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=LIGHT_BLUE)
-            draw.text((15, y + 3), item, font=small_font, fill=BLACK)
+            draw.text((15, y + 3), items[i], font=small_font, fill=BLACK)
             # Draw selection icon
             draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
         else:
             draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=GRAY)
-            draw.text((15, y + 3), item, font=small_font, fill=WHITE)
-
+            draw.text((15, y + 3), items[i], font=small_font, fill=WHITE)
 def draw_info_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
