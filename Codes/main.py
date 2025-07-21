@@ -371,16 +371,27 @@ def draw_sub_page(draw, title):
                 draw.rounded_rectangle((5, 100, 60, 116), radius=5, fill=GRAY)
                 draw.text((10, 102), "Exit", font=small_font, fill=WHITE)
         else:
-            for i, (kar_name, key) in enumerate(saved_keys):
-                y = 30 + i * 15
+            # عدد العناصر المعروضة في الشاشة (Viewport)
+            max_display_items = 4
+            # حساب أول عنصر يتم عرضه بناءً على المؤشر
+            if len(saved_keys) <= max_display_items:
+                start_index = 0
+            else:
+                start_index = max(0, min(selected_index - 1, len(saved_keys) - max_display_items))
+            
+            # عرض المفاتيح ضمن نافذة العرض
+            for i in range(start_index, min(start_index + max_display_items, len(saved_keys))):
+                y = 30 + (i - start_index) * 15
                 if i == selected_index:
                     draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=LIGHT_BLUE)
-                    draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=BLACK)
+                    draw.text((15, y + 2), f"{saved_keys[i][0]}: {saved_keys[i][1][:10]}...", font=tiny_font, fill=BLACK)
                     draw.polygon((8, y + 5, 12, y + 9, 8, y + 13), fill=BLACK)
                 else:
                     draw.rounded_rectangle((5, y, 122, y + 14), radius=3, fill=GRAY)
-                    draw.text((15, y + 2), f"{kar_name}: {key[:10]}...", font=tiny_font, fill=WHITE)
-            select_y = 90 + len(saved_keys) * 15
+                    draw.text((15, y + 2), f"{saved_keys[i][0]}: {saved_keys[i][1][:10]}...", font=tiny_font, fill=WHITE)
+            
+            # عرض أزرار Select و Exit
+            select_y = 30 + min(len(saved_keys), max_display_items) * 15
             if selected_index == len(saved_keys):
                 draw.rounded_rectangle((5, select_y, 60, select_y + 14), radius=5, fill=LIGHT_BLUE)
                 draw.text((10, select_y + 2), "Select", font=small_font, fill=BLACK)
