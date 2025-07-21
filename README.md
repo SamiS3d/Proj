@@ -150,24 +150,6 @@ Scripts are located in /scripts/.
 Captured keys are stored in /storage/rf_keys/.
 Wi-Fi capture files are saved in /storage/wifi_caps/.
 
-📁 Project Structure
-IoT-GEN-Security-Node/
-├── README.md
-├── main_gui.py
-├── scripts/
-│   ├── rf_capture.py
-│   ├── rf_replay.py
-│   ├── rf_jamming_detect.py
-│   ├── wifi_attack.py
-├── storage/
-│   ├── rf_keys/
-│   └── wifi_caps/
-├── images/
-│   ├── model.jpg
-│   ├── wiring.png
-│   ├── ui_screenshot.png
-└── requirements.txt
-
 🧩 Future Improvements
 
 Implement an Intrusion Prevention System (IPS) for RF behavior anomaly detection.
