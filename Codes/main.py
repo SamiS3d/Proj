@@ -198,12 +198,12 @@ def read_adc(channel):
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 BLUE = (0, 120, 255)
-GRAY = (50, 50, 50)
+GRAY = (40, 40, 40)          # رمادي أغمق للتباين
 DARK_GRAY = (30, 30, 30)
-LIGHT_BLUE = (100, 180, 255)
+LIGHT_BLUE = (80, 160, 255)  # لون أزرق أكثر نعومة
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-
+ORANGE = (255, 150, 0)       # لون برتقالي للأزرار المهمة
 # الخطوط
 try:
     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)
@@ -254,31 +254,29 @@ def read_process_output(process, output_queue):
 # رسم القوائم
 def draw_menu(draw, items, selected):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
-    # Draw header with smoother gradient-like background
+    # خلفية التدرج للهيدر
     draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
-    draw.rectangle((0, 20, 127, 22), fill=(40, 40, 40))  # Subtle gradient
-    draw.text((8, 4), "Menu", font=font, fill=WHITE)
+    draw.rectangle((0, 20, 127, 22), fill=(50, 50, 50))  # تدرج خفيف
+    draw.text((8, 4), "IoT-GEN", font=font, fill=WHITE)
 
-    # عدد العناصر المعروضة في الشاشة (Viewport)
     max_display_items = 4
     if len(items) <= max_display_items:
         start_index = 0
     else:
         start_index = max(0, min(selected - 1, len(items) - max_display_items))
 
-    # عرض العناصر ضمن نافذة العرض
     for i in range(start_index, min(start_index + max_display_items, len(items))):
-        y = 26 + (i - start_index) * 24  # زيادة التباعد لتناسق أفضل
+        y = 26 + (i - start_index) * 24
         if i == selected:
             draw.rounded_rectangle((5, y, 112, y + 22), radius=6, fill=LIGHT_BLUE)
             draw.text((18, y + 4), items[i], font=small_font, fill=BLACK)
-            # Draw selection icon
-            draw.polygon([(10, y + 8), (14, y + 12), (10, y + 16)], fill=BLACK)
+            # أيقونة تحديد محسّنة
+            draw.text((10, y + 4), ">", font=small_font, fill=BLACK)
         else:
-            draw.rounded_rectangle((5, y, 112, y + 22), radius=6, fill=(60, 60, 60))  # لون رمادي أفتح قليلاً
+            draw.rounded_rectangle((5, y, 112, y + 22), radius=6, fill=GRAY)
             draw.text((18, y + 4), items[i], font=small_font, fill=WHITE)
 
-    # Scrollbar
+    # شريط تمرير محسّن
     if len(items) > max_display_items:
         scrollbar_x = 115
         scrollbar_height = 90
@@ -286,9 +284,10 @@ def draw_menu(draw, items, selected):
         item_height = scrollbar_height / len(items)
         selected_pos = (selected * item_height) + scrollbar_y_start
         bar_height = (max_display_items * item_height)
-        draw.rectangle((scrollbar_x, scrollbar_y_start, scrollbar_x + 6, scrollbar_y_start + scrollbar_height), fill=(20, 20, 20))  # Scrollbar background
-        draw.rectangle((scrollbar_x, selected_pos, scrollbar_x + 6, selected_pos + bar_height), fill=LIGHT_BLUE)  # Scrollbar indicator
-
+        draw.rounded_rectangle((scrollbar_x, scrollbar_y_start, scrollbar_x + 6, scrollbar_y_start + scrollbar_height), radius=2, fill=(20, 20, 20))
+        draw.rounded_rectangle((scrollbar_x, selected_pos, scrollbar_x + 6, selected_pos + bar_height), radius=2, fill=LIGHT_BLUE)
+        # إضافة ظل خفيف
+        draw.rectangle((scrollbar_x - 1, selected_pos - 1, scrollbar_x + 7, selected_pos + bar_height + 1), outline=(60, 60, 60))
 
 def draw_info_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
