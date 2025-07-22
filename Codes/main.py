@@ -254,29 +254,42 @@ def read_process_output(process, output_queue):
 # رسم القوائم
 def draw_menu(draw, items, selected):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
-    # Draw header
+    # Draw header with smoother gradient-like background
     draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
-    draw.text((5, 3), "Menu", font=font, fill=WHITE)
-    
+    draw.rectangle((0, 20, 127, 22), fill=(40, 40, 40))  # Subtle gradient
+    draw.text((8, 4), "Menu", font=font, fill=WHITE)
+
     # عدد العناصر المعروضة في الشاشة (Viewport)
     max_display_items = 4
-    # حساب أول عنصر يتم عرضه بناءً على المؤشر
     if len(items) <= max_display_items:
         start_index = 0
     else:
         start_index = max(0, min(selected - 1, len(items) - max_display_items))
-    
+
     # عرض العناصر ضمن نافذة العرض
     for i in range(start_index, min(start_index + max_display_items, len(items))):
-        y = 25 + (i - start_index) * 22
+        y = 26 + (i - start_index) * 24  # زيادة التباعد لتناسق أفضل
         if i == selected:
-            draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=LIGHT_BLUE)
-            draw.text((15, y + 3), items[i], font=small_font, fill=BLACK)
+            draw.rounded_rectangle((5, y, 112, y + 22), radius=6, fill=LIGHT_BLUE)
+            draw.text((18, y + 4), items[i], font=small_font, fill=BLACK)
             # Draw selection icon
-            draw.polygon([(8, y + 8), (12, y + 12), (8, y + 16)], fill=BLACK)
+            draw.polygon([(10, y + 8), (14, y + 12), (10, y + 16)], fill=BLACK)
         else:
-            draw.rounded_rectangle((5, y, 122, y + 20), radius=5, fill=GRAY)
-            draw.text((15, y + 3), items[i], font=small_font, fill=WHITE)
+            draw.rounded_rectangle((5, y, 112, y + 22), radius=6, fill=(60, 60, 60))  # لون رمادي أفتح قليلاً
+            draw.text((18, y + 4), items[i], font=small_font, fill=WHITE)
+
+    # Scrollbar
+    if len(items) > max_display_items:
+        scrollbar_x = 115
+        scrollbar_height = 90
+        scrollbar_y_start = 26
+        item_height = scrollbar_height / len(items)
+        selected_pos = (selected * item_height) + scrollbar_y_start
+        bar_height = (max_display_items * item_height)
+        draw.rectangle((scrollbar_x, scrollbar_y_start, scrollbar_x + 6, scrollbar_y_start + scrollbar_height), fill=(20, 20, 20))  # Scrollbar background
+        draw.rectangle((scrollbar_x, selected_pos, scrollbar_x + 6, selected_pos + bar_height), fill=LIGHT_BLUE)  # Scrollbar indicator
+
+
 def draw_info_page(draw):
     draw.rectangle((0, 0, 127, 127), fill=BLACK)
     draw.rectangle((0, 0, 127, 20), fill=DARK_GRAY)
