@@ -298,7 +298,6 @@ def draw_info_page(draw):
         "Cybersecurity",
         "Requirement",
         "By: Sami Saad",
-        "Ahmed Rashid",
         "Exit"
     ]
     for i, line in enumerate(lines):
